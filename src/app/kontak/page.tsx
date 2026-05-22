@@ -1,0 +1,227 @@
+"use client";
+
+import React, { useState } from "react";
+import { Phone, Mail, Clock, MapPin, Send, HelpCircle } from "lucide-react";
+import { getWhatsAppLink } from "@/utils/whatsapp";
+
+export default function KontakPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [interest, setInterest] = useState("Landing Page Bisnis");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !phone || !message) {
+      alert("Harap lengkapi Nama, Nomor HP/WA, dan Detail Pesan Anda.");
+      return;
+    }
+    
+    // Construct WA message
+    const waText = `Halo Digital Carroll Base, saya *${name}* (${email || '-'}).
+No. Kontak: *${phone}*
+Saya tertarik pada layanan: *${interest}*
+
+*Pesan/Pertanyaan:*
+${message}`;
+
+    const waUrl = getWhatsAppLink(waText);
+    window.open(waUrl, "_blank");
+  };
+
+  const contactInfos = [
+    {
+      icon: Phone,
+      title: "WhatsApp Chat",
+      value: "0851-7969-0688",
+      description: "Konsultasi gratis & respon cepat 30 menit.",
+      link: getWhatsAppLink("Halo Digital Carroll Base, saya ingin tanya-tanya seputar pembuatan website.")
+    },
+    {
+      icon: Mail,
+      title: "Email Resmi",
+      value: "digital@carrollbase.com",
+      description: "Untuk proposal kerjasama B2B & penawaran formal.",
+      link: "mailto:digital@carrollbase.com"
+    },
+    {
+      icon: Clock,
+      title: "Jam Operasional",
+      value: "08:00 - 21:00 WIB",
+      description: "Senin sampai Minggu (Respon cepat setiap hari).",
+      link: null
+    },
+    {
+      icon: MapPin,
+      title: "Lokasi",
+      value: "Indonesia",
+      description: "Melayani pembuatan website secara online untuk seluruh wilayah Indonesia.",
+      link: null
+    }
+  ];
+
+  return (
+    <div className="pb-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      
+      {/* Header */}
+      <section className="text-center max-w-3xl mx-auto space-y-4 pt-10">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+          Hubungi Kami
+        </span>
+        <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white leading-tight">
+          Mulai Diskusi Website Impian Anda
+        </h1>
+        <p className="text-slate-650 dark:text-slate-350 text-base sm:text-lg">
+          Ada pertanyaan seputar paket, kebutuhan custom, atau ingin melihat demo lebih detail? Kirim pesan Anda di bawah ini.
+        </p>
+      </section>
+
+      {/* Grid Contact info and Form */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        
+        {/* Left Side: Contact Cards */}
+        <div className="lg:col-span-5 space-y-6">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Informasi Kontak</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
+            Tim representasi Digital Carroll Base siap merespon pertanyaan Anda secara detail. Klik nomor WhatsApp atau Email di bawah ini untuk terhubung langsung.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
+            {contactInfos.map((info, idx) => {
+              const Icon = info.icon;
+              const content = (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 p-6 rounded-2xl flex gap-4 hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300">
+                  <div className="w-11 h-11 rounded-xl bg-blue-550/10 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <Icon className="w-5.5 h-5.5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">{info.title}</h4>
+                    <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">{info.value}</p>
+                    <p className="text-xs text-slate-550 dark:text-slate-450 leading-relaxed">{info.description}</p>
+                  </div>
+                </div>
+              );
+
+              return info.link ? (
+                <a 
+                  key={idx} 
+                  href={info.link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block hover:scale-[1.01] active:scale-[0.99] transition-transform"
+                >
+                  {content}
+                </a>
+              ) : (
+                <div key={idx}>{content}</div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Side: Form */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-250/60 dark:border-slate-800/60 rounded-3xl p-6 sm:p-10 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Formulir Pertanyaan</h2>
+              <p className="text-slate-550 dark:text-slate-450 text-xs sm:text-sm mt-1">
+                Data formulir di bawah ini dikirimkan langsung ke admin WhatsApp kami.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="full-name" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Lengkap</label>
+                  <input
+                    id="full-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="cth. Alexander Carroll"
+                    required
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="email-addr" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email (Opsional)</label>
+                  <input
+                    id="email-addr"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="cth. alex@carroll.com"
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="phone-num" className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. HP / WhatsApp</label>
+                  <input
+                    id="phone-num"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="cth. 08123456789"
+                    required
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="topic-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Layanan yang Diminati</label>
+                  <select
+                    id="topic-select"
+                    value={interest}
+                    onChange={(e) => setInterest(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950 cursor-pointer"
+                  >
+                    <option value="Landing Page Bisnis">Landing Page Bisnis - Rp 799k</option>
+                    <option value="Company Profile Website">Company Profile Website - Rp 1.499k</option>
+                    <option value="Katalog Produk Online">Katalog Produk Online - Rp 1.999k</option>
+                    <option value="Website Kustom">Website Kustom Lainnya</option>
+                    <option value="Tanya Pertanyaan Umum">Tanya Pertanyaan Umum</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="question-text" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Detail Pesan / Pertanyaan</label>
+                <textarea
+                  id="question-text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Jelaskan jenis bisnis Anda dan fitur apa saja yang Anda harapkan ada di website..."
+                  rows={4}
+                  required
+                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950 resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-3.5 rounded-xl shadow-md transition-colors cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Kirim Pertanyaan via WhatsApp</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </section>
+
+      {/* Mini FAQ reminder */}
+      <section className="bg-slate-100/50 dark:bg-slate-900/10 p-8 sm:p-12 rounded-3xl max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-6 border border-slate-200/50 dark:border-slate-800/50">
+        <HelpCircle className="w-12 h-12 text-blue-600 dark:text-blue-400 shrink-0" />
+        <div className="space-y-1 text-center sm:text-left">
+          <h4 className="font-bold text-slate-900 dark:text-white text-base">Butuh respon kilat kurang dari 5 menit?</h4>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Anda dapat mengklik widget floating WhatsApp hijau di pojok kanan bawah halaman untuk terhubung langsung dengan tim sales representative kami.</p>
+        </div>
+      </section>
+      
+    </div>
+  );
+}
