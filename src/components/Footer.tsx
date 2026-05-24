@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Laptop, Mail, Phone, MapPin, ExternalLink } from "lucide-react";
 import { getWhatsAppLink } from "@/utils/whatsapp";
+import { Reveal } from "./Reveal";
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -41,7 +42,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           
           {/* Brand Col */}
-          <div className="space-y-6">
+          <Reveal y={18} duration={600} className="space-y-6">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
                 <Laptop className="w-5.5 h-5.5" />
@@ -72,10 +73,10 @@ export const Footer: React.FC = () => {
                 <span>Indonesia (Melayani pembuatan website secara online untuk seluruh wilayah Indonesia.)</span>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Quick Links Col */}
-          <div className="space-y-6">
+          <Reveal delay={70} y={18} duration={600} className="space-y-6">
             <h3 className="text-white font-semibold text-base">Navigasi</h3>
             <ul className="space-y-3 text-sm">
               {companyLinks.map((link) => (
@@ -87,10 +88,10 @@ export const Footer: React.FC = () => {
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           {/* Services Col */}
-          <div className="space-y-6">
+          <Reveal delay={140} y={18} duration={600} className="space-y-6">
             <h3 className="text-white font-semibold text-base">Layanan Pembuatan</h3>
             <ul className="space-y-3 text-sm">
               {servicesLinks.map((link) => (
@@ -102,10 +103,10 @@ export const Footer: React.FC = () => {
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           {/* Demos Col */}
-          <div className="space-y-6">
+          <Reveal delay={210} y={18} duration={600} className="space-y-6">
             <h3 className="text-white font-semibold text-base">Demo Website</h3>
             <ul className="space-y-3 text-sm">
               {demoLinks.map((link) => (
@@ -118,7 +119,7 @@ export const Footer: React.FC = () => {
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
         </div>
       </div>

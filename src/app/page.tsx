@@ -15,6 +15,7 @@ import { DemoCard } from "@/components/DemoCard";
 import { PricingCard } from "@/components/PricingCard";
 import { FAQSection } from "@/components/FAQSection";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { Reveal } from "@/components/Reveal";
 
 export default function HomePage() {
   // Steps for the work process
@@ -74,41 +75,49 @@ export default function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center relative z-10">
           {/* Badge */}
-          <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-full text-xs font-semibold tracking-wider uppercase mb-6 animate-fade-in">
-            <Sparkles className="w-3.5 h-3.5" />
-            Jasa Pembuatan Website Kredibel
-          </div>
+          <Reveal y={18} duration={600}>
+            <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-full text-xs font-semibold tracking-wider uppercase mb-6 animate-fade-in">
+              <Sparkles className="w-3.5 h-3.5" />
+              Jasa Pembuatan Website Kredibel
+            </div>
+          </Reveal>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight max-w-4xl mx-auto">
-            Website Modern untuk Bisnis yang Ingin{" "}
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">
-              Tampil Profesional
-            </span>
-          </h1>
+          <Reveal delay={90} y={22} duration={680}>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight max-w-4xl mx-auto">
+              Website Modern untuk Bisnis yang Ingin{" "}
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">
+                Tampil Profesional
+              </span>
+            </h1>
+          </Reveal>
 
           {/* Subheadline */}
-          <p className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-350 max-w-2xl mx-auto leading-relaxed">
-            Kami membantu UMKM, personal brand, dan bisnis lokal memiliki website modern, responsif, dan mudah dihubungi pelanggan.
-          </p>
+          <Reveal delay={180} y={22} duration={680}>
+            <p className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-350 max-w-2xl mx-auto leading-relaxed">
+              Kami membantu UMKM, personal brand, dan bisnis lokal memiliki website modern, responsif, dan mudah dihubungi pelanggan.
+            </p>
+          </Reveal>
 
           {/* CTAs */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/layanan"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-full shadow-lg shadow-indigo-500/20 hover:from-blue-500 hover:to-purple-500 hover:scale-103 transition-all duration-300 gap-2 cursor-pointer"
-            >
-              <span>Lihat Layanan</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            
-            <WhatsAppButton
-              variant="outline"
-              className="w-full sm:w-auto border-slate-300! text-slate-700! dark:text-slate-300! dark:border-slate-800! hover:bg-slate-100! dark:hover:bg-slate-900!"
-              text="Konsultasi via WhatsApp"
-              message="Halo Digital Carroll Base, saya ingin berkonsultasi mengenai pembuatan website untuk bisnis saya."
-            />
-          </div>
+          <Reveal delay={270} y={20} duration={680}>
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/layanan"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-full shadow-lg shadow-indigo-500/20 hover:from-blue-500 hover:to-purple-500 hover:scale-103 transition-all duration-300 gap-2 cursor-pointer"
+              >
+                <span>Lihat Layanan</span>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <WhatsAppButton
+                variant="outline"
+                className="w-full sm:w-auto border-slate-300! text-slate-700! dark:text-slate-300! dark:border-slate-800! hover:bg-slate-100! dark:hover:bg-slate-900!"
+                text="Konsultasi via WhatsApp"
+                message="Halo Digital Carroll Base, saya ingin berkonsultasi mengenai pembuatan website untuk bisnis saya."
+              />
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -116,7 +125,7 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Text Content */}
-          <div className="space-y-6">
+          <Reveal className="space-y-6">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Tentang Digital Carroll Base
             </span>
@@ -130,19 +139,19 @@ export default function HomePage() {
             {/* Core Pillars list */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
               {corePillars.map((pillar, i) => (
-                <div key={i} className="space-y-3">
+                <Reveal key={i} delay={Math.min(i * 90, 270)} y={18} className="space-y-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pillar.color}`}>
                     <pillar.icon className="w-5.5 h-5.5" />
                   </div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white">{pillar.title}</h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{pillar.description}</p>
-                </div>
+                </Reveal>
               ))}
             </div>
-          </div>
+          </Reveal>
 
           {/* Graphic Panel / Stats */}
-          <div className="relative bg-slate-900 rounded-3xl p-8 sm:p-12 overflow-hidden text-white shadow-xl shadow-blue-950/20">
+          <Reveal delay={120} y={28} className="relative bg-slate-900 rounded-3xl p-8 sm:p-12 overflow-hidden text-white shadow-xl shadow-blue-950/20">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl" />
             <div className="relative z-10 space-y-8">
               <div className="space-y-2">
@@ -169,13 +178,13 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* 3. Three Main Service Cards */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-slate-100/50 dark:bg-slate-900/10 py-16 rounded-3xl">
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+        <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
             Layanan Kami
           </span>
@@ -185,21 +194,25 @@ export default function HomePage() {
           <p className="text-slate-650 dark:text-slate-400 text-sm sm:text-base">
             Kami menyediakan paket spesifik yang dirancang sesuai skala kebutuhan bisnis Anda.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {services.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+          {services.map((service, i) => (
+            <Reveal key={service.id} delay={Math.min(i * 90, 450)} className="h-full">
+              <ServiceCard service={service} />
+            </Reveal>
           ))}
         </div>
-        <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
-        </p>
+        <Reveal y={16}>
+          <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+            Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+          </p>
+        </Reveal>
       </section>
 
       {/* 4. Demo Website Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-16 gap-4">
+        <Reveal className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-16 gap-4">
           <div className="space-y-3 max-w-xl">
             <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
               Live Preview
@@ -218,11 +231,13 @@ export default function HomePage() {
             <span>Semua Demo Website</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {demos.map((demo) => (
-            <DemoCard key={demo.id} demo={demo} />
+          {demos.map((demo, i) => (
+            <Reveal key={demo.id} delay={Math.min(i * 90, 450)} className="h-full">
+              <DemoCard demo={demo} />
+            </Reveal>
           ))}
         </div>
       </section>
@@ -232,7 +247,7 @@ export default function HomePage() {
         {/* Glow decoration */}
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3 relative z-10">
+        <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3 relative z-10">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-450 text-blue-400">
             Alur Kerja Kami
           </span>
@@ -242,12 +257,12 @@ export default function HomePage() {
           <p className="text-slate-400 text-sm sm:text-base">
             Alur kerja sederhana dan terstruktur agar kebutuhan website Anda dipahami dengan jelas, dikerjakan secara rapi, dan siap dipublikasikan.
           </p>
-        </div>
+        </Reveal>
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
           {processSteps.map((step, i) => (
-            <div key={i} className="relative space-y-4 group">
+            <Reveal key={i} delay={Math.min(i * 90, 360)} className="relative space-y-4 group">
               {/* Step indicator */}
               <div className="text-5xl font-black text-slate-800 group-hover:text-blue-500/30 transition-colors duration-300">
                 {step.step}
@@ -259,14 +274,14 @@ export default function HomePage() {
               {i < 3 && (
                 <div className="hidden md:block absolute top-6 left-1/2 w-full h-[1px] bg-slate-800 -z-10" />
               )}
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* 6. Pricing Preview Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+        <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
             Investasi Bisnis
           </span>
@@ -276,19 +291,23 @@ export default function HomePage() {
           <p className="text-slate-650 dark:text-slate-400 text-sm sm:text-base">
             Biaya satu kali bayar (one-time fee) di awal dengan cakupan fitur yang jelas sesuai kebutuhan website bisnis Anda.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {pricingPlans.map((plan) => (
-            <PricingCard key={plan.id} plan={plan} />
+          {pricingPlans.map((plan, i) => (
+            <Reveal key={plan.id} delay={Math.min(i * 90, 450)} className="h-full">
+              <PricingCard plan={plan} />
+            </Reveal>
           ))}
         </div>
 
-        <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
-        </p>
+        <Reveal y={16}>
+          <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+            Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+          </p>
+        </Reveal>
 
-        <div className="text-center mt-10">
+        <Reveal y={16} className="text-center mt-10">
           <Link
             href="/harga"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
@@ -296,12 +315,12 @@ export default function HomePage() {
             <span>Bandingkan Detail Paket & Fitur</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       {/* 7. FAQ Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+        <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-purple-650 dark:text-purple-400">
             Pertanyaan Umum
           </span>
@@ -311,14 +330,14 @@ export default function HomePage() {
           <p className="text-slate-650 dark:text-slate-400 text-sm sm:text-base">
             Jawaban cepat untuk membantu Anda memahami detail layanan dan teknis pembuatan website.
           </p>
-        </div>
+        </Reveal>
 
         <FAQSection />
       </section>
 
       {/* 8. WhatsApp CTA Section */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-tr from-blue-650 to-indigo-900 dark:from-slate-900 dark:to-indigo-950/60 p-8 sm:p-14 rounded-3xl text-center text-white relative overflow-hidden shadow-xl shadow-indigo-950/10">
+        <Reveal className="bg-gradient-to-tr from-blue-650 to-indigo-900 dark:from-slate-900 dark:to-indigo-950/60 p-8 sm:p-14 rounded-3xl text-center text-white relative overflow-hidden shadow-xl shadow-indigo-950/10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-650/40 via-transparent to-transparent pointer-events-none" />
           
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
@@ -341,7 +360,7 @@ export default function HomePage() {
               Kami akan merespons secepat mungkin pada jam operasional.
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
     </div>

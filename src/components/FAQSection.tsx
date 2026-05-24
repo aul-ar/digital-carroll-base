@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { Reveal } from "./Reveal";
 
 interface FAQItem {
   question: string;
@@ -51,14 +52,14 @@ export const FAQSection: React.FC = () => {
       {faqs.map((faq, index) => {
         const isOpen = openIndex === index;
         return (
-          <div
-            key={index}
-            className={`border rounded-2xl transition-all duration-300 ${
-              isOpen
-                ? "bg-blue-50/40 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/50 shadow-sm"
-                : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700"
-            }`}
-          >
+          <Reveal key={index} delay={Math.min(index * 90, 450)} y={18}>
+            <div
+              className={`border rounded-2xl transition-all duration-300 ${
+                isOpen
+                  ? "bg-blue-50/40 dark:bg-blue-950/10 border-blue-200 dark:border-blue-900/50 shadow-sm"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}
+            >
             <button
               onClick={() => toggleFAQ(index)}
               className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 font-semibold text-slate-900 dark:text-white transition-colors cursor-pointer select-none"
@@ -80,6 +81,7 @@ export const FAQSection: React.FC = () => {
               </div>
             </div>
           </div>
+          </Reveal>
         );
       })}
     </div>
