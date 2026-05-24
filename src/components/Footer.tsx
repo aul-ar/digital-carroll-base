@@ -76,7 +76,7 @@ export const Footer: React.FC = () => {
 
           {/* Quick Links Col */}
           <div className="space-y-6">
-            <h3 className="text-white font-semibold text-base">Perusahaan</h3>
+            <h3 className="text-white font-semibold text-base">Navigasi</h3>
             <ul className="space-y-3 text-sm">
               {companyLinks.map((link) => (
                 <li key={link.name}>
