@@ -5,7 +5,9 @@ import {
   ArrowRight, 
   ShieldCheck, 
   Zap, 
-  HeartHandshake
+  HeartHandshake,
+  CheckCircle2,
+  Info
 } from "lucide-react";
 import { services } from "@/data/services";
 import { demos } from "@/data/demos";
@@ -62,6 +64,26 @@ export default function HomePage() {
       description: "Kami membantu proses deploy, pengaturan custom domain, dan konfigurasi dasar agar website dapat diakses publik dengan rapi.",
       color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
     }
+  ];
+
+  const includedItems = [
+    "Desain website responsif",
+    "Struktur halaman sesuai kebutuhan paket",
+    "Penyusunan konten dasar",
+    "Tombol WhatsApp atau kontak utama",
+    "Form kontak sederhana jika diperlukan",
+    "Bantuan publikasi website",
+    "Panduan penggunaan dasar"
+  ];
+
+  const excludedItems = [
+    "Pembelian domain tahunan",
+    "Biaya hosting atau server",
+    "Aset premium seperti font, gambar, icon, atau template berbayar",
+    "Biaya layanan pihak ketiga",
+    "Fitur custom kompleks di luar cakupan paket",
+    "Integrasi payment gateway atau API khusus jika membutuhkan setup tambahan",
+    "Pengelolaan iklan, SEO lanjutan, atau maintenance rutin bulanan"
   ];
 
   return (
@@ -318,7 +340,70 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      {/* 7. FAQ Section */}
+      {/* 7. Scope Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            Scope Layanan
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+            Apa yang Termasuk & Belum Termasuk?
+          </h2>
+          <p className="text-slate-650 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
+            Agar proses kerja lebih jelas sejak awal, berikut gambaran umum hal yang biasanya termasuk dalam layanan dan hal yang perlu disiapkan atau dibayar terpisah sesuai kebutuhan proyek.
+          </p>
+        </Reveal>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Reveal className="h-full" delay={0}>
+            <div className="h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-5.5 h-5.5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Yang Termasuk</h3>
+              </div>
+
+              <ul className="space-y-3">
+                {includedItems.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-350 leading-relaxed">
+                    <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+
+          <Reveal className="h-full" delay={90}>
+            <div className="h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/70 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <Info className="w-5.5 h-5.5" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Belum Termasuk</h3>
+              </div>
+
+              <ul className="space-y-3">
+                {excludedItems.map((item) => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-350 leading-relaxed">
+                    <Info className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+        </div>
+
+        <Reveal y={16}>
+          <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+            Detail akhir tetap menyesuaikan jenis website, jumlah halaman, fitur yang dibutuhkan, dan kesepakatan sebelum pengerjaan dimulai.
+          </p>
+        </Reveal>
+      </section>
+
+      {/* 8. FAQ Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-purple-650 dark:text-purple-400">
@@ -335,7 +420,7 @@ export default function HomePage() {
         <FAQSection />
       </section>
 
-      {/* 8. WhatsApp CTA Section */}
+      {/* 9. WhatsApp CTA Section */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <Reveal className="bg-gradient-to-tr from-blue-650 to-indigo-900 dark:from-slate-900 dark:to-indigo-950/60 p-8 sm:p-14 rounded-3xl text-center text-white relative overflow-hidden shadow-xl shadow-indigo-950/10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-650/40 via-transparent to-transparent pointer-events-none" />
