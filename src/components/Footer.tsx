@@ -43,7 +43,7 @@ export const Footer: React.FC = () => {
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Membantu UMKM, personal brand, dan bisnis lokal memiliki website modern, responsif, dan siap mendatangkan banyak pelanggan.
+              Membantu UMKM, personal brand, dan bisnis lokal memiliki website modern, responsif, dan siap digunakan untuk promosi online.
             </p>
             <div className="space-y-3">
               <a 

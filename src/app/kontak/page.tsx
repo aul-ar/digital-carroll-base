@@ -35,7 +35,7 @@ ${message}`;
       icon: Phone,
       title: "WhatsApp Chat",
       value: "0851-7969-0688",
-      description: "Konsultasi gratis & respon cepat 30 menit.",
+      description: "Kami akan merespons secepat mungkin pada jam operasional.",
       link: getWhatsAppLink("Halo Digital Carroll Base, saya ingin tanya-tanya seputar pembuatan website.")
     },
     {
@@ -49,7 +49,7 @@ ${message}`;
       icon: Clock,
       title: "Jam Operasional",
       value: "08:00 - 21:00 WIB",
-      description: "Senin sampai Minggu (Respon cepat setiap hari).",
+      description: "Senin sampai Minggu, sesuai ketersediaan jam operasional.",
       link: null
     },
     {
@@ -84,7 +84,7 @@ ${message}`;
         <div className="lg:col-span-5 space-y-6">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Informasi Kontak</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-            Tim representasi Digital Carroll Base siap merespon pertanyaan Anda secara detail. Klik nomor WhatsApp atau Email di bawah ini untuk terhubung langsung.
+            Kami siap membantu menjawab pertanyaan teknis maupun non-teknis terkait kebutuhan website Anda. Klik nomor WhatsApp atau Email di bawah ini untuk terhubung langsung.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
@@ -217,8 +217,8 @@ ${message}`;
       <section className="bg-slate-100/50 dark:bg-slate-900/10 p-8 sm:p-12 rounded-3xl max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-6 border border-slate-200/50 dark:border-slate-800/50">
         <HelpCircle className="w-12 h-12 text-blue-600 dark:text-blue-400 shrink-0" />
         <div className="space-y-1 text-center sm:text-left">
-          <h4 className="font-bold text-slate-900 dark:text-white text-base">Butuh respon kilat kurang dari 5 menit?</h4>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Anda dapat mengklik widget floating WhatsApp hijau di pojok kanan bawah halaman untuk terhubung langsung dengan tim sales representative kami.</p>
+          <h4 className="font-bold text-slate-900 dark:text-white text-base">Butuh diskusi langsung terkait kebutuhan website?</h4>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">Kami siap membantu menjawab pertanyaan teknis maupun non-teknis terkait kebutuhan website Anda.</p>
         </div>
       </section>
       

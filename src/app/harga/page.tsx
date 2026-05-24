@@ -12,11 +12,11 @@ export const metadata = {
 export default function HargaPage() {
   const comparisonFeatures = [
     { name: "Target Utama Bisnis", landing: "Produk Tunggal / Iklan", profile: "Profil Perusahaan & Jasa", catalog: "Etalase Toko / Retailer" },
-    { name: "Jumlah Halaman Utama", landing: "1 Halaman (One-Page)", profile: "Hingga 5 Halaman", catalog: "Halaman Produk Unlimited" },
+    { name: "Jumlah Halaman Utama", landing: "1 Halaman (One-Page)", profile: "Hingga 5 Halaman", catalog: "Produk sesuai cakupan paket" },
     { name: "Bantuan Custom Domain", landing: true, profile: true, catalog: true },
     { name: "Bantuan Deploy Website", landing: true, profile: true, catalog: true },
     { name: "Pengaturan Dasar Website", landing: true, profile: true, catalog: true },
-    { name: "Responsive Desain (Mobile & Tablet)", landing: true, profile: true, catalog: true },
+    { name: "Desain Responsif (Mobile & Tablet)", landing: true, profile: true, catalog: true },
     { name: "Copywriting Struktur Konversi", landing: true, profile: false, catalog: false },
     { name: "Integrasi Tombol Pemesanan WA", landing: true, profile: true, catalog: true },
     { name: "Fitur Keranjang Belanja WA", landing: false, profile: false, catalog: true },

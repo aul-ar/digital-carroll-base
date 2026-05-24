@@ -22,7 +22,7 @@ export default function LayananPage() {
           Layanan Pembuatan Website Profesional
         </h1>
         <p className="text-slate-650 dark:text-slate-350 text-base sm:text-lg">
-          Mulai dari halaman promosi konversi tinggi hingga katalog produk interaktif, kami siap merealisasikan platform online terbaik untuk bisnis Anda.
+          Mulai dari halaman promosi hingga katalog produk interaktif, kami siap membantu merealisasikan website yang sesuai dengan kebutuhan bisnis Anda.
         </p>
       </section>
 

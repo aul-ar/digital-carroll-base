@@ -37,7 +37,7 @@ export default function HomePage() {
     {
       step: "04",
       title: "Publikasi & Panduan Dasar",
-      description: "Setelah final, website dibantu untuk dipublikasikan. Kami juga memberikan panduan dasar agar Anda memahami cara menggunakan website."
+      description: "Setelah final, kami membantu proses publikasi website hingga siap diakses secara online. Kami juga memberikan panduan dasar agar Anda memahami cara menggunakan website."
     }
   ];
 
@@ -156,8 +156,8 @@ export default function HomePage() {
                   <p className="text-xs text-slate-400">Tampilan Responsif</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-3xl font-extrabold text-purple-400">&lt; 3 Detik</span>
-                  <p className="text-xs text-slate-400">Target Akses Cepat</p>
+                  <span className="text-3xl font-extrabold text-purple-400">Ringan</span>
+                  <p className="text-xs text-slate-400">Struktur Website Optimal</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-3xl font-extrabold text-emerald-400">Gratis</span>
@@ -208,7 +208,7 @@ export default function HomePage() {
               Lihat Contoh Hasil Website
             </h2>
             <p className="text-slate-650 dark:text-slate-450 text-sm sm:text-base">
-              Jangan beli kucing dalam karung. Jelajahi interaktif berbagai jenis layout yang dapat langsung Anda miliki.
+              Lihat contoh tampilan sebelum menentukan paket yang paling sesuai dengan kebutuhan bisnis Anda.
             </p>
           </div>
           <Link
@@ -240,7 +240,7 @@ export default function HomePage() {
             4 Langkah Mudah Memiliki Website
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Proses kerja dibuat sederhana dan terstruktur agar kebutuhan website Anda dapat dipahami, dikerjakan, dan dipublikasikan dengan lebih rapi.
+            Alur kerja sederhana dan terstruktur agar kebutuhan website Anda dipahami dengan jelas, dikerjakan secara rapi, dan siap dipublikasikan.
           </p>
         </div>
 
@@ -326,7 +326,7 @@ export default function HomePage() {
               Punya Pertanyaan Khusus Mengenai Website Impian Anda?
             </h2>
             <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
-              Konsultasikan secara gratis apa saja yang bisnis Anda perlukan. Tim developer kami siap menjawab pertanyaan teknis maupun non-teknis secara ramah.
+              Konsultasikan apa saja yang bisnis Anda perlukan. Kami siap membantu menjawab pertanyaan teknis maupun non-teknis terkait kebutuhan website Anda.
             </p>
             <div className="pt-4">
               <WhatsAppButton
@@ -338,7 +338,7 @@ export default function HomePage() {
               />
             </div>
             <p className="text-xs text-slate-350">
-              Respons cepat dalam waktu kurang dari 30 menit (Jam Kerja: 08.00 - 21.00 WIB)
+              Kami akan merespons secepat mungkin pada jam operasional.
             </p>
           </div>
         </div>

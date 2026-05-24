@@ -95,7 +95,7 @@ export const demos: Demo[] = [
     title: "Carroll Refresh - Redesign Website Modern",
     slug: "redesign-website",
     category: "UX/UI Refresh",
-    description: "Demo perbandingan tampilan sebelum/sesudah yang memperlihatkan website lama berubah menjadi lebih modern, bersih, dan mobile-friendly.",
+    description: "Demo perbandingan tampilan sebelum/sesudah yang memperlihatkan website lama berubah menjadi lebih modern, bersih, dan Mobile-Friendly.",
     features: [
       "Before / After style comparison",
       "Peningkatan tata letak visual dan hierarki",

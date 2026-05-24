@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Digital Carroll Base | Jasa Pembuatan Website Profesional & Modern",
-  description: "Digital Carroll Base membantu UMKM, personal brand, dan bisnis lokal membuat website modern, responsif, dan professional untuk meningkatkan kredibilitas dan omset penjualan.",
+  description: "Digital Carroll Base membantu UMKM, personal brand, dan bisnis lokal membuat website modern, responsif, dan profesional untuk mendukung promosi online.",
   keywords: ["jasa pembuatan website", "website umkm", "landing page murah", "company profile perusahaan", "digital carroll base", "buat website jakarta"],
   authors: [{ name: "Digital Carroll Base" }],
   openGraph: {

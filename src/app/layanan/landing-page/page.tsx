@@ -18,7 +18,7 @@ import {
 
 export const metadata = {
   title: "Landing Page Bisnis | Digital Carroll Base",
-  description: "Optimalkan konversi iklan Anda dengan landing page bisnis yang didesain profesional, responsif, dan siap menghasilkan penjualan."
+  description: "Dukung promosi online Anda dengan landing page bisnis yang didesain profesional, responsif, dan mudah dipahami calon pelanggan."
 };
 
 export default function LandingPageService() {
@@ -30,17 +30,17 @@ export default function LandingPageService() {
     {
       icon: MousePointerClick,
       title: "Desain Fokus Konversi",
-      description: "Tata letak tombol CTA (Call to Action) strategis untuk merangsang klik WhatsApp pelanggan."
+      description: "Tata letak tombol CTA (Call to Action) disusun agar pengunjung mudah menghubungi bisnis Anda melalui WhatsApp."
     },
     {
       icon: TrendingUp,
       title: "Optimasi Copywriting",
-      description: "Teks penawaran ditulis dengan alur AIDA (Attention, Interest, Desire, Action) yang memikat."
+      description: "Teks penawaran ditulis dengan alur yang jelas agar pesan bisnis lebih mudah dipahami calon pelanggan."
     },
     {
       icon: Smartphone,
-      title: "Super Mobile Responsive",
-      description: "Lebih dari 90% traffic landing page dari handphone. Kami pastikan tampilan mobile sangat presisi."
+      title: "Responsif di Mobile",
+      description: "Tampilan disusun agar nyaman diakses dari HP, tablet, maupun desktop."
     }
   ];
 

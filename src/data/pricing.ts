@@ -24,9 +24,9 @@ export const pricingPlans: PricingPlan[] = [
     targetServiceSlug: "landing-page",
     features: [
       { text: "Desain 1 Halaman Premium", included: true },
-      { text: "Responsive di Mobile & Tablet", included: true },
+      { text: "Responsif di Mobile & Tablet", included: true },
       { text: "Copywriting Struktur Konversi", included: true },
-      { text: "Integrasi Tombol WhatsApp Direct", included: true },
+      { text: "Integrasi Tombol Langsung via WhatsApp", included: true },
       { text: "Integrasi Pixel/Google Analytics", included: true },
       { text: "Bantuan Custom Domain", included: true },
       { text: "Bantuan Deploy Website", included: true },
@@ -46,29 +46,29 @@ export const pricingPlans: PricingPlan[] = [
     targetServiceSlug: "company-profile",
     features: [
       { text: "Desain Multi-Halaman (Hingga 5 Halaman)", included: true },
-      { text: "Responsive di Mobile & Tablet", included: true },
+      { text: "Responsif di Mobile & Tablet", included: true },
       { text: "Halaman Tentang Kami, Layanan & Portofolio", included: true },
-      { text: "Integrasi Tombol WhatsApp Direct", included: true },
+      { text: "Integrasi Tombol Langsung via WhatsApp", included: true },
       { text: "Integrasi Google Maps & Form Kontak", included: true },
       { text: "Bantuan Custom Domain", included: true },
       { text: "Bantuan Deploy Website", included: true },
       { text: "Katalog & Pencarian Produk", included: false },
       { text: "Sistem Keranjang WhatsApp", included: false },
-      { text: "SEO Optimization Dasar", included: true },
-      { text: "Revisi Desain", included: true }, // Unlimited revisi minor
+      { text: "SEO Dasar", included: true },
+      { text: "Revisi Desain", included: true }, // Sesuai ketentuan paket
     ]
   },
   {
     id: "plan-katalog-produk",
     name: "Katalog Produk Online",
     price: "Mulai Rp 1.499.000",
-    description: "Pilihan terbaik untuk toko online/distributor yang ingin memajang banyak produk secara rapi tanpa ribet e-commerce.",
+    description: "Pilihan praktis untuk toko online/distributor yang ingin memajang produk secara rapi tanpa ribet e-commerce.",
     popular: false,
     deliveryTime: "10-14 Hari Kerja",
     targetServiceSlug: "katalog-produk",
     features: [
-      { text: "Halaman Showcase Produk Tanpa Batas", included: true },
-      { text: "Responsive di Mobile & Tablet", included: true },
+      { text: "Showcase produk sesuai cakupan paket", included: true },
+      { text: "Responsif di Mobile & Tablet", included: true },
       { text: "Fitur Pencarian & Filter Kategori", included: true },
       { text: "Tombol Order WhatsApp per Produk", included: true },
       { text: "Sistem Keranjang Pemesanan WhatsApp", included: true },
@@ -76,7 +76,7 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Bantuan Deploy Website", included: true },
       { text: "Manajemen Produk Gampang", included: true },
       { text: "Struktur Website Rapi", included: true },
-      { text: "SEO Optimization Lengkap", included: true },
+      { text: "SEO Dasar", included: true },
       { text: "Revisi Desain", included: true },
     ]
   },
@@ -110,7 +110,7 @@ export const pricingPlans: PricingPlan[] = [
     deliveryTime: "7-14 Hari Kerja",
     targetServiceSlug: "online-store-sederhana",
     features: [
-      { text: "Katalog produk responsive", included: true },
+      { text: "Katalog produk responsif", included: true },
       { text: "Halaman detail produk lengkap", included: true },
       { text: "Keranjang sederhana", included: true },
       { text: "Checkout via WhatsApp", included: true },
@@ -156,10 +156,10 @@ export const pricingPlans: PricingPlan[] = [
       { text: "CTA dan alur disesuaikan", included: true },
       { text: "Form pendaftaran atau event", included: true },
       { text: "Konsultasi konsep sebelum pengerjaan", included: true },
-      { text: "Responsive di semua perangkat", included: true },
-      { text: "Support WhatsApp order", included: true },
+      { text: "Responsif di semua perangkat", included: true },
+      { text: "Dukungan order via WhatsApp", included: true },
       { text: "Bantuan Deploy Website", included: false },
-      { text: "Garansi revisi desain", included: true }
+      { text: "Revisi desain sesuai ketentuan paket", included: true }
     ]
   }
 ];

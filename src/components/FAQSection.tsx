@@ -25,12 +25,12 @@ export const FAQSection: React.FC = () => {
       answer: "Bisa. Kami dapat membantu proses deploy, pengaturan custom domain, dan konfigurasi dasar agar website siap diakses publik. Detail kebutuhan teknis akan disesuaikan dengan paket dan kondisi website Anda."
     },
     {
-      question: "Apakah websitenya mobile-friendly dan cepat dibuka?",
-      answer: "Tentu saja. Lebih dari 80% calon pembeli menggunakan handphone. Kami memastikan struktur website dioptimalkan secara responsif (tampil sempurna di semua ukuran layar) dan menggunakan teknologi Next.js terbaru agar loading super cepat saat diklik."
+      question: "Apakah websitenya Mobile-Friendly dan cepat dibuka?",
+      answer: "Ya. Website dibuat responsif agar nyaman diakses dari berbagai ukuran layar. Struktur halaman juga dibuat ringan untuk membantu performa loading tetap optimal."
     },
     {
       question: "Bagaimana jika ada kesalahan atau revisi setelah website online?",
-      answer: "Kami berkomitmen menjaga kualitas. Setelah website online, Anda mendapatkan masa garansi pemeliharaan selama 30 hari secara gratis untuk perbaikan jika ada error teknis. Kami juga memberikan panduan video agar Anda bisa mengupdate konten sendiri."
+      answer: "Setelah website online, kami membantu pengecekan awal jika ada kendala teknis dari proses pengerjaan. Panduan penggunaan dasar juga dapat diberikan agar Anda lebih mudah memahami website."
     },
     {
       question: "Bagaimana alur pembayaran dan pemesanan?",

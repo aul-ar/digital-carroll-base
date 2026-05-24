@@ -17,20 +17,20 @@ export const services: Service[] = [
     title: "Landing Page Bisnis",
     slug: "landing-page",
     shortDescription: "Halaman penawaran satu halaman (one-page) yang dioptimalkan khusus untuk meningkatkan penjualan dan konversi iklan Anda.",
-    fullDescription: "Landing Page Bisnis adalah solusi terbaik untuk Anda yang ingin mempromosikan produk spesifik, jasa, acara, atau menjalankan kampanye iklan berbayar (Google Ads, Facebook Ads, TikTok Ads). Didesain dengan struktur copywriting yang persuasif, loading super cepat, dan tombol call-to-action (CTA) yang jelas mengarah ke WhatsApp Anda.",
+    fullDescription: "Landing Page Bisnis adalah solusi untuk Anda yang ingin mempromosikan produk spesifik, jasa, acara, atau menjalankan kampanye iklan berbayar (Google Ads, Facebook Ads, TikTok Ads). Didesain dengan struktur copywriting yang persuasif, struktur website ringan, dan tombol call-to-action (CTA) yang jelas mengarah ke WhatsApp Anda.",
     features: [
-      "Desain Responsive & Mobile-friendly",
+      "Desain Responsif & Mobile-Friendly",
       "Struktur Copywriting Persuasif",
-      "Hingga 5-7 Bagian (Sections)",
-      "Form Kontak / Pemesanan Direct WA",
+      "Hingga 5-7 Bagian Halaman",
+      "Form Kontak / Pemesanan Langsung via WhatsApp",
       "Integrasi Tracking (Pixel, Analytics)",
       "Bantuan Deploy & Custom Domain",
       "Kecepatan Loading Maksimal (Speed Optimized)"
     ],
     benefits: [
-      "Meningkatkan conversion rate iklan hingga 2x lipat.",
+      "Membantu meningkatkan efektivitas halaman tujuan iklan.",
       "Memudahkan calon pelanggan memahami produk/jasa dalam sekali baca.",
-      "Tampilan profesional membangun rasa percaya instan.",
+      "Tampilan profesional membantu membangun rasa percaya.",
       "Proses pembuatan cepat (3-5 hari kerja)."
     ],
     priceStartingFrom: "Mulai Rp 799.000",
@@ -66,8 +66,8 @@ export const services: Service[] = [
     id: "katalog-produk",
     title: "Katalog Produk Online",
     slug: "katalog-produk",
-    shortDescription: "Website showcase produk interaktif dengan kategori, detail produk, dan sistem order langsung terhubung ke WhatsApp penjual.",
-    fullDescription: "Katalog Produk Online adalah jalan tengah terbaik bagi bisnis ritel atau UMKM yang memiliki banyak produk tetapi belum memerlukan sistem e-commerce penuh dengan payment gateway yang rumit. Pelanggan dapat menjelajahi produk Anda secara interaktif, memfilter berdasarkan kategori, melihat detail produk, dan memesan produk yang diminati via WhatsApp otomatis beserta detail pesanannya.",
+    shortDescription: "Website katalog produk interaktif dengan kategori, detail produk, dan sistem order langsung terhubung ke WhatsApp penjual.",
+    fullDescription: "Katalog Produk Online adalah pilihan praktis bagi bisnis ritel atau UMKM yang memiliki banyak produk tetapi belum memerlukan sistem e-commerce penuh dengan payment gateway yang rumit. Pelanggan dapat menjelajahi produk Anda secara interaktif, memfilter berdasarkan kategori, melihat detail produk, dan memesan produk yang diminati via WhatsApp otomatis beserta detail pesanannya.",
     features: [
       "Showcase Produk Interaktif & Galeri Foto",
       "Filter Kategori & Pencarian Produk",
@@ -118,7 +118,7 @@ export const services: Service[] = [
     shortDescription: "Website toko online sederhana untuk menampilkan produk, detail produk, keranjang sederhana, dan checkout langsung via WhatsApp.",
     fullDescription: "Online Store Sederhana cocok untuk UMKM dan usaha retail yang ingin menjual produk secara online dengan tampilan bersih, katalog interaktif, halaman produk detail, serta proses checkout yang mudah lewat WhatsApp.",
     features: [
-      "Katalog produk responsive",
+      "Katalog produk responsif",
       "Detail produk lengkap",
       "Keranjang sederhana",
       "Checkout via WhatsApp",

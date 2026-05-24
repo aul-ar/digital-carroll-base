@@ -118,7 +118,7 @@ export default function CompanyProfileService() {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Formulir Kontak Terhubung Direct WA</span>
+                <span>Formulir Kontak Terhubung Langsung via WhatsApp</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
