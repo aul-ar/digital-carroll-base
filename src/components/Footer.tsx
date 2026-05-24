@@ -10,12 +10,20 @@ export const Footer: React.FC = () => {
     { name: "Landing Page Bisnis", href: "/layanan/landing-page" },
     { name: "Company Profile Website", href: "/layanan/company-profile" },
     { name: "Katalog Produk Online", href: "/layanan/katalog-produk" },
+    { name: "Website Portfolio", href: "/layanan/website-portfolio" },
+    { name: "Online Store Sederhana", href: "/layanan/online-store-sederhana" },
+    { name: "Redesign Website", href: "/layanan/redesign-website" },
+    { name: "Website Sesuai Kebutuhan", href: "/layanan/website-sesuai-kebutuhan" },
   ];
 
   const demoLinks = [
     { name: "Demo Landing Page", href: "/demo/landing-page" },
     { name: "Demo Company Profile", href: "/demo/company-profile" },
     { name: "Demo Katalog Produk", href: "/demo/katalog-produk" },
+    { name: "Demo Website Portfolio", href: "/demo/website-portfolio" },
+    { name: "Demo Online Store", href: "/demo/online-store-sederhana" },
+    { name: "Demo Redesign Website", href: "/demo/redesign-website" },
+    { name: "Demo Website Custom", href: "/demo/website-sesuai-kebutuhan" },
   ];
 
   const companyLinks = [
