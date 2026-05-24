@@ -41,7 +41,6 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
             <span className="text-3xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-850 dark:from-white dark:to-slate-100 bg-clip-text text-transparent">
               {plan.price}
             </span>
-            <span className="text-slate-400 text-xs font-medium ml-1">/ paket selesai</span>
           </div>
         </div>
 
@@ -87,7 +86,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
           variant={plan.popular ? "secondary" : "primary"}
           className="w-full"
           text="Pesan Paket Ini"
-          message={`Halo Digital Carroll Base, saya tertarik memesan "${plan.name}" dengan harga promo ${plan.price}. Bagaimana kelanjutannya?`}
+          message={`Halo Digital Carroll Base, saya tertarik dengan layanan "${plan.name}" (${plan.price}). Bagaimana kelanjutannya?`}
         />
       </div>
     </div>

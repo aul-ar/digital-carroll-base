@@ -21,8 +21,8 @@ export const FAQSection: React.FC = () => {
       answer: "Proses pengerjaan bergantung pada jenis paket yang dipilih. Landing Page Bisnis biasanya selesai dalam 3-5 hari kerja. Company Profile memakan waktu 7-10 hari kerja. Sementara Katalog Produk Online memerlukan waktu sekitar 10-14 hari kerja tergantung jumlah produk yang diinput."
     },
     {
-      question: "Apakah biaya yang tertera sudah termasuk domain dan hosting?",
-      answer: "Ya! Semua paket kami sudah termasuk sewa domain internasional (.com) dan hosting premium selama 1 tahun penuh. Mulai tahun kedua, Anda hanya perlu membayar biaya perpanjangan domain & hosting tahunan yang sangat terjangkau."
+      question: "Apakah website bisa dibantu sampai online?",
+      answer: "Bisa. Kami dapat membantu proses deploy, pengaturan custom domain, dan konfigurasi dasar agar website siap diakses publik. Detail kebutuhan teknis akan disesuaikan dengan paket dan kondisi website Anda."
     },
     {
       question: "Apakah websitenya mobile-friendly dan cepat dibuka?",

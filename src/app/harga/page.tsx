@@ -13,9 +13,9 @@ export default function HargaPage() {
   const comparisonFeatures = [
     { name: "Target Utama Bisnis", landing: "Produk Tunggal / Iklan", profile: "Profil Perusahaan & Jasa", catalog: "Etalase Toko / Retailer" },
     { name: "Jumlah Halaman Utama", landing: "1 Halaman (One-Page)", profile: "Hingga 5 Halaman", catalog: "Halaman Produk Unlimited" },
-    { name: "Sewa Domain (.com) 1 Tahun", landing: true, profile: true, catalog: true },
-    { name: "Hosting Premium 1 Tahun", landing: true, profile: true, catalog: true },
-    { name: "Sertifikat SSL Keamanan", landing: true, profile: true, catalog: true },
+    { name: "Bantuan Custom Domain", landing: true, profile: true, catalog: true },
+    { name: "Bantuan Deploy Website", landing: true, profile: true, catalog: true },
+    { name: "Pengaturan Dasar Website", landing: true, profile: true, catalog: true },
     { name: "Responsive Desain (Mobile & Tablet)", landing: true, profile: true, catalog: true },
     { name: "Copywriting Struktur Konversi", landing: true, profile: false, catalog: false },
     { name: "Integrasi Tombol Pemesanan WA", landing: true, profile: true, catalog: true },
@@ -42,10 +42,15 @@ export default function HargaPage() {
       </section>
 
       {/* Pricing Cards Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {pricingPlans.map((plan) => (
-          <PricingCard key={plan.id} plan={plan} />
-        ))}
+      <section className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {pricingPlans.map((plan) => (
+            <PricingCard key={plan.id} plan={plan} />
+          ))}
+        </div>
+        <p className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+        </p>
       </section>
 
       {/* Comparison Table Section */}

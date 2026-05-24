@@ -80,7 +80,7 @@ export default function KatalogProdukService() {
             </span>
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
               <Tag className="w-4 h-4 text-purple-500" />
-              Mulai {service.priceStartingFrom}
+              {service.priceStartingFrom}
             </span>
           </div>
 
@@ -128,10 +128,9 @@ export default function KatalogProdukService() {
           </div>
 
           <div className="pt-6 border-t border-white/10 relative z-10">
-            <span className="text-xs text-emerald-250 block">Harga Spesial</span>
+            <span className="text-xs text-emerald-250 block">Estimasi Harga</span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-extrabold">{plan.price}</span>
-              <span className="text-xs line-through text-slate-300">{plan.originalPrice}</span>
             </div>
           </div>
         </div>

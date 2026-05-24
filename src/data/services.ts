@@ -24,7 +24,7 @@ export const services: Service[] = [
       "Hingga 5-7 Bagian (Sections)",
       "Form Kontak / Pemesanan Direct WA",
       "Integrasi Tracking (Pixel, Analytics)",
-      "Gratis Domain (.com) & Hosting 1 Tahun",
+      "Bantuan Deploy & Custom Domain",
       "Kecepatan Loading Maksimal (Speed Optimized)"
     ],
     benefits: [
@@ -33,7 +33,7 @@ export const services: Service[] = [
       "Tampilan profesional membangun rasa percaya instan.",
       "Proses pembuatan cepat (3-5 hari kerja)."
     ],
-    priceStartingFrom: "Rp 799.000",
+    priceStartingFrom: "Mulai Rp 799.000",
     deliveryTime: "3-5 Hari Kerja",
     iconName: "FileText"
   },
@@ -49,8 +49,8 @@ export const services: Service[] = [
       "Galeri Portofolio & Proyek",
       "Integrasi Google Maps & FAQ",
       "SEO Friendly (Mudah ditemukan di Google)",
-      "Security SSL Sertifikat Aman",
-      "Gratis Domain (.com) & Hosting Premium 1 Tahun"
+      "Struktur Halaman Rapi & Mudah Dipahami",
+      "Bantuan Deploy & Custom Domain"
     ],
     benefits: [
       "Memperkuat kredibilitas bisnis di mata klien nasional maupun internasional.",
@@ -58,7 +58,7 @@ export const services: Service[] = [
       "Membantu memenangkan tender dan negosiasi bisnis.",
       "Dapat dikembangkan di kemudian hari (skalabel)."
     ],
-    priceStartingFrom: "Rp 1.499.000",
+    priceStartingFrom: "Mulai Rp 1.499.000",
     deliveryTime: "7-10 Hari Kerja",
     iconName: "Building2"
   },
@@ -75,7 +75,7 @@ export const services: Service[] = [
       "Tombol 'Beli via WhatsApp' dengan data produk otomatis",
       "Manajemen Produk yang Mudah & Ringan",
       "Responsif di Semua Layar Gadget",
-      "Gratis Domain (.com) & Hosting 1 Tahun"
+      "Bantuan Deploy & Custom Domain"
     ],
     benefits: [
       "Memudahkan pelanggan melihat stok & varian produk Anda secara mandiri.",
@@ -83,7 +83,7 @@ export const services: Service[] = [
       "Mengurangi biaya pembuatan aplikasi e-commerce yang mahal.",
       "Meningkatkan profesionalisme toko online Anda."
     ],
-    priceStartingFrom: "Rp 1.999.000",
+    priceStartingFrom: "Mulai Rp 1.499.000",
     deliveryTime: "10-14 Hari Kerja",
     iconName: "ShoppingBag"
   },
@@ -107,7 +107,7 @@ export const services: Service[] = [
       "Memberikan kesan profesional dengan tampilan rapi.",
       "Mempercepat lead langsung melalui WhatsApp."
     ],
-    priceStartingFrom: "Rp 699.000",
+    priceStartingFrom: "Mulai Rp 699.000",
     deliveryTime: "3-5 Hari Kerja",
     iconName: "UserCircle"
   },
@@ -131,7 +131,7 @@ export const services: Service[] = [
       "Meningkatkan peluang closing lewat chat langsung.",
       "Membuat toko online tampil lebih profesional."
     ],
-    priceStartingFrom: "Rp 1.499.000",
+    priceStartingFrom: "Mulai Rp 1.999.000",
     deliveryTime: "7-14 Hari Kerja",
     iconName: "ShoppingCart"
   },
@@ -155,7 +155,7 @@ export const services: Service[] = [
       "Mengurangi bounce rate dan kebingungan.",
       "Membuat website lebih siap untuk pasar modern."
     ],
-    priceStartingFrom: "Rp 799.000",
+    priceStartingFrom: "Mulai Rp 799.000",
     deliveryTime: "3-7 Hari Kerja",
     iconName: "RefreshCcw"
   },
@@ -179,7 +179,7 @@ export const services: Service[] = [
       "Memperkuat pesan acara atau komunitas.",
       "Lebih fleksibel untuk pengembangan selanjutnya."
     ],
-    priceStartingFrom: "Rp 999.000",
+    priceStartingFrom: "Konsultasi Kebutuhan",
     deliveryTime: "Menyesuaikan kebutuhan",
     iconName: "Layers"
   }

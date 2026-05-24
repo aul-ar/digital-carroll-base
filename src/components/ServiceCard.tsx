@@ -36,7 +36,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
               {service.title}
             </h3>
             <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold tracking-wider uppercase">
-              Mulai {service.priceStartingFrom}
+              {service.priceStartingFrom}
             </span>
           </div>
         </div>

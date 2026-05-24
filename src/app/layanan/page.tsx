@@ -27,10 +27,15 @@ export default function LayananPage() {
       </section>
 
       {/* Services Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {services.map((service) => (
-          <ServiceCard key={service.id} service={service} />
-        ))}
+      <section className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {services.map((service) => (
+            <ServiceCard key={service.id} service={service} />
+          ))}
+        </div>
+        <p className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+        </p>
       </section>
 
       {/* Process summary / CTA banner */}

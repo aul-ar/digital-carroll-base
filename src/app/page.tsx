@@ -22,22 +22,22 @@ export default function HomePage() {
     {
       step: "01",
       title: "Konsultasi Kebutuhan",
-      description: "Diskusikan visi, produk, dan target pasar bisnis Anda bersama tim kami via chat WhatsApp secara santai dan gratis."
+      description: "Kami mulai dengan memahami jenis bisnis, tujuan website, target pelanggan, referensi desain, dan fitur yang dibutuhkan."
     },
     {
       step: "02",
-      title: "Desain & Copywriting",
-      description: "Kami rancang tata letak visual dan susun copywriting persuasif yang sesuai dengan identitas bisnis Anda."
+      title: "Perencanaan Konten & Desain",
+      description: "Struktur halaman, alur informasi, tampilan visual, dan copywriting disusun agar website terlihat profesional dan mudah dipahami pengunjung."
     },
     {
       step: "03",
       title: "Development & Revisi",
-      description: "Proses coding website menggunakan standar teknologi modern. Anda dapat mereview dan mengajukan revisi minor."
+      description: "Website dikembangkan menggunakan teknologi modern, lalu Anda dapat meninjau hasilnya dan mengajukan revisi sesuai ketentuan paket."
     },
     {
       step: "04",
-      title: "Go Live & Dukungan",
-      description: "Website resmi diluncurkan dengan domain pilihan Anda (.com). Kami berikan panduan video panduan pengelolaan."
+      title: "Publikasi & Panduan Dasar",
+      description: "Setelah final, website dibantu untuk dipublikasikan. Kami juga memberikan panduan dasar agar Anda memahami cara menggunakan website."
     }
   ];
 
@@ -45,20 +45,20 @@ export default function HomePage() {
   const corePillars = [
     {
       icon: Zap,
-      title: "Loading Super Cepat",
-      description: "Menggunakan teknologi modern Next.js yang menjamin website memuat konten kurang dari 2 detik.",
+      title: "Website Ringan & Responsif",
+      description: "Dibuat dengan struktur modern agar tampilan nyaman dibuka dari HP, tablet, maupun desktop.",
       color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30"
     },
     {
       icon: ShieldCheck,
-      title: "Keamanan SSL Terjamin",
-      description: "Setiap website dilengkapi dengan sertifikat SSL gratis untuk enkripsi data aman dan bebas peringatan browser.",
+      title: "Struktur Website Rapi",
+      description: "Layout, navigasi, dan konten disusun agar pengunjung mudah memahami layanan bisnis Anda.",
       color: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30"
     },
     {
       icon: HeartHandshake,
-      title: "Gratis Domain & Hosting",
-      description: "Tidak perlu pusing memikirkan biaya hosting dan domain di tahun pertama. Semuanya sudah kami siapkan.",
+      title: "Bantuan Publikasi Website",
+      description: "Kami membantu proses deploy, pengaturan custom domain, dan konfigurasi dasar agar website dapat diakses publik dengan rapi.",
       color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
     }
   ];
@@ -121,10 +121,10 @@ export default function HomePage() {
               Tentang Digital Carroll Base
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white leading-tight">
-              Mengapa Memilih Kami Sebagai Partner Digital Anda?
+              Mengapa Memilih Digital Carroll Base?
             </h2>
             <p className="text-slate-650 dark:text-slate-350 text-base sm:text-lg leading-relaxed">
-              Kami percaya bahwa setiap bisnis berhak memiliki wajah online yang menawan. Digital Carroll Base hadir untuk memangkas kerumitan pembuatan website. Kami menggabungkan kecepatan loading maksimal, desain interaktif, serta optimasi SEO dasar agar website Anda tidak hanya tampil keren, tetapi juga ramah bagi calon pelanggan.
+              Digital Carroll Base membantu UMKM, personal brand, dan bisnis kecil membangun website modern yang rapi, cepat, dan mudah dipahami calon pelanggan. Kami fokus pada landing page, company profile, katalog online, dan website bisnis sederhana yang siap digunakan untuk promosi, branding, dan meningkatkan kepercayaan pelanggan.
             </p>
             
             {/* Core Pillars list */}
@@ -146,26 +146,26 @@ export default function HomePage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl" />
             <div className="relative z-10 space-y-8">
               <div className="space-y-2">
-                <span className="text-xs font-bold text-blue-400 tracking-wider uppercase">Fokus Utama Kami</span>
-                <h3 className="text-2xl font-bold">Membangun Kehadiran Digital yang Menghasilkan</h3>
+                <span className="text-xs font-bold text-blue-400 tracking-wider uppercase">FOKUS UTAMA KAMI</span>
+                <h3 className="text-2xl font-bold">Membuat Website Bisnis yang Siap Dipakai untuk Promosi</h3>
               </div>
               
               <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-800">
                 <div className="space-y-1">
                   <span className="text-3xl font-extrabold text-blue-400">100%</span>
-                  <p className="text-xs text-slate-400">Desain Kustom & Responsif</p>
+                  <p className="text-xs text-slate-400">Tampilan Responsif</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-3xl font-extrabold text-purple-400">&lt; 3 Detik</span>
-                  <p className="text-xs text-slate-400">Kecepatan Akses Mobile</p>
+                  <p className="text-xs text-slate-400">Target Akses Cepat</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-3xl font-extrabold text-emerald-400">Gratis</span>
-                  <p className="text-xs text-slate-400">Domain & Hosting 1 Tahun</p>
+                  <p className="text-xs text-slate-400">Konsultasi Awal</p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-3xl font-extrabold text-pink-400">Gratis</span>
-                  <p className="text-xs text-slate-400">Konsultasi Kebutuhan</p>
+                  <span className="text-3xl font-extrabold text-pink-400">Praktis</span>
+                  <p className="text-xs text-slate-400">Proses Pengerjaan</p>
                 </div>
               </div>
             </div>
@@ -192,6 +192,9 @@ export default function HomePage() {
             <ServiceCard key={service.id} service={service} />
           ))}
         </div>
+        <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+        </p>
       </section>
 
       {/* 4. Demo Website Section */}
@@ -237,7 +240,7 @@ export default function HomePage() {
             4 Langkah Mudah Memiliki Website
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Proses pemesanan terstruktur yang menjamin kepuasan hasil akhir tanpa menyita waktu berharga Anda.
+            Proses kerja dibuat sederhana dan terstruktur agar kebutuhan website Anda dapat dipahami, dikerjakan, dan dipublikasikan dengan lebih rapi.
           </p>
         </div>
 
@@ -271,7 +274,7 @@ export default function HomePage() {
             Paket Harga Transparan & Jujur
           </h2>
           <p className="text-slate-650 dark:text-slate-400 text-sm sm:text-base">
-            Biaya satu kali bayar (one-time fee) di awal dengan gratis domain + hosting premium selama 1 tahun pertama.
+            Biaya satu kali bayar (one-time fee) di awal dengan cakupan fitur yang jelas sesuai kebutuhan website bisnis Anda.
           </p>
         </div>
 
@@ -280,6 +283,10 @@ export default function HomePage() {
             <PricingCard key={plan.id} plan={plan} />
           ))}
         </div>
+
+        <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          Harga belum termasuk pembelian domain, hosting, aset premium, atau biaya layanan pihak ketiga. Jika diperlukan, kami dapat membantu proses setup dan konfigurasi dasar.
+        </p>
 
         <div className="text-center mt-10">
           <Link

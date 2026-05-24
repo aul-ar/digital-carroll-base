@@ -66,7 +66,7 @@ export default function WebsiteSesuaiKebutuhanService() {
             </span>
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
               <Tag className="w-4 h-4 text-purple-500" />
-              Mulai {service.priceStartingFrom}
+              {service.priceStartingFrom}
             </span>
           </div>
 
@@ -112,10 +112,9 @@ export default function WebsiteSesuaiKebutuhanService() {
           </div>
 
           <div className="pt-6 border-t border-white/10 relative z-10">
-            <span className="text-xs text-orange-200 block">Harga Paket</span>
+            <span className="text-xs text-orange-200 block">Estimasi Harga</span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-extrabold">{plan.price}</span>
-              <span className="text-xs line-through text-slate-350">{plan.originalPrice}</span>
             </div>
           </div>
         </div>

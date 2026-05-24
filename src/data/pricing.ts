@@ -17,8 +17,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-landing-page",
     name: "Landing Page Bisnis",
-    price: "Rp 799.000",
-    originalPrice: "Rp 1.200.000",
+    price: "Mulai Rp 799.000",
     description: "Sempurna untuk promosi produk tunggal, event, jualan jasa, atau link tujuan iklan berbayar.",
     popular: false,
     deliveryTime: "3-5 Hari Kerja",
@@ -29,8 +28,8 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Copywriting Struktur Konversi", included: true },
       { text: "Integrasi Tombol WhatsApp Direct", included: true },
       { text: "Integrasi Pixel/Google Analytics", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: true },
-      { text: "Gratis Hosting 1 Tahun", included: true },
+      { text: "Bantuan Custom Domain", included: true },
+      { text: "Bantuan Deploy Website", included: true },
       { text: "Multi-Halaman Menu", included: false },
       { text: "Katalog & Pencarian Produk", included: false },
       { text: "Sistem Keranjang WhatsApp", included: false },
@@ -40,8 +39,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-company-profile",
     name: "Company Profile",
-    price: "Rp 1.499.000",
-    originalPrice: "Rp 2.500.000",
+    price: "Mulai Rp 1.499.000",
     description: "Cocok untuk UMKM, instansi, yayasan, atau profesional yang ingin meningkatkan kredibilitas merek.",
     popular: true,
     deliveryTime: "7-10 Hari Kerja",
@@ -52,8 +50,8 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Halaman Tentang Kami, Layanan & Portofolio", included: true },
       { text: "Integrasi Tombol WhatsApp Direct", included: true },
       { text: "Integrasi Google Maps & Form Kontak", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: true },
-      { text: "Gratis Hosting Premium 1 Tahun", included: true },
+      { text: "Bantuan Custom Domain", included: true },
+      { text: "Bantuan Deploy Website", included: true },
       { text: "Katalog & Pencarian Produk", included: false },
       { text: "Sistem Keranjang WhatsApp", included: false },
       { text: "SEO Optimization Dasar", included: true },
@@ -63,8 +61,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-katalog-produk",
     name: "Katalog Produk Online",
-    price: "Rp 1.999.000",
-    originalPrice: "Rp 3.500.000",
+    price: "Mulai Rp 1.499.000",
     description: "Pilihan terbaik untuk toko online/distributor yang ingin memajang banyak produk secara rapi tanpa ribet e-commerce.",
     popular: false,
     deliveryTime: "10-14 Hari Kerja",
@@ -75,10 +72,10 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Fitur Pencarian & Filter Kategori", included: true },
       { text: "Tombol Order WhatsApp per Produk", included: true },
       { text: "Sistem Keranjang Pemesanan WhatsApp", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: true },
-      { text: "Gratis Hosting Premium 1 Tahun", included: true },
+      { text: "Bantuan Custom Domain", included: true },
+      { text: "Bantuan Deploy Website", included: true },
       { text: "Manajemen Produk Gampang", included: true },
-      { text: "Security SSL Sertifikat", included: true },
+      { text: "Struktur Website Rapi", included: true },
       { text: "SEO Optimization Lengkap", included: true },
       { text: "Revisi Desain", included: true },
     ]
@@ -86,8 +83,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-website-portfolio",
     name: "Website Portfolio",
-    price: "Rp 699.000",
-    originalPrice: "Rp 1.200.000",
+    price: "Mulai Rp 699.000",
     description: "Solusi website personal untuk menampilkan profil profesional, portofolio proyek, dan kontak WhatsApp langsung.",
     popular: false,
     deliveryTime: "3-5 Hari Kerja",
@@ -99,8 +95,8 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Tombol Kontak WhatsApp", included: true },
       { text: "Responsif di semua perangkat", included: true },
       { text: "Form kontak langsung", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: true },
-      { text: "Gratis Hosting 1 Tahun", included: true },
+      { text: "Bantuan Custom Domain", included: true },
+      { text: "Bantuan Deploy Website", included: true },
       { text: "Desain personal branding yang rapi", included: true },
       { text: "Revisi Desain", included: true }
     ]
@@ -108,8 +104,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-online-store-sederhana",
     name: "Online Store Sederhana",
-    price: "Rp 1.499.000",
-    originalPrice: "Rp 2.800.000",
+    price: "Mulai Rp 1.999.000",
     description: "Website toko online sederhana dengan katalog, detail produk, keranjang ringan, dan checkout WhatsApp.",
     popular: true,
     deliveryTime: "7-14 Hari Kerja",
@@ -120,8 +115,8 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Keranjang sederhana", included: true },
       { text: "Checkout via WhatsApp", included: true },
       { text: "Filter produk dan kategori", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: true },
-      { text: "Gratis Hosting 1 Tahun", included: true },
+      { text: "Bantuan Custom Domain", included: true },
+      { text: "Bantuan Deploy Website", included: true },
       { text: "Manajemen produk mudah", included: true },
       { text: "Sistem order WA otomatis", included: true },
       { text: "Revisi Desain", included: true }
@@ -130,8 +125,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-redesign-website",
     name: "Redesign Website",
-    price: "Rp 799.000",
-    originalPrice: "Rp 1.500.000",
+    price: "Mulai Rp 799.000",
     description: "Pembaruan tampilan website lama menjadi lebih modern, responsif, dan mudah digunakan.",
     popular: false,
     deliveryTime: "3-7 Hari Kerja",
@@ -143,16 +137,15 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Struktur halaman profesional", included: true },
       { text: "Update palet warna & tipografi", included: true },
       { text: "Review aksesibilitas dasar", included: true },
-      { text: "Gratis Domain (.com) 1 Tahun", included: false },
-      { text: "Hosting 1 Tahun", included: false },
+      { text: "Bantuan Custom Domain", included: false },
+      { text: "Bantuan Deploy Website", included: false },
       { text: "Revisi Desain", included: true }
     ]
   },
   {
     id: "plan-website-sesuai-kebutuhan",
     name: "Website Sesuai Kebutuhan",
-    price: "Rp 999.000",
-    originalPrice: "Rp 2.000.000",
+    price: "Konsultasi Kebutuhan",
     description: "Website custom untuk event, pendaftaran, komunitas atau kampanye promosi khusus.",
     popular: false,
     deliveryTime: "Menyesuaikan kebutuhan",
@@ -165,7 +158,7 @@ export const pricingPlans: PricingPlan[] = [
       { text: "Konsultasi konsep sebelum pengerjaan", included: true },
       { text: "Responsive di semua perangkat", included: true },
       { text: "Support WhatsApp order", included: true },
-      { text: "Hosting 1 Tahun", included: false },
+      { text: "Bantuan Deploy Website", included: false },
       { text: "Garansi revisi desain", included: true }
     ]
   }
