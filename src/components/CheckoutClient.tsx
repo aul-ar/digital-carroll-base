@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
 import { getCheckoutPlan } from "@/lib/checkout-packages";
 import { createInvoiceData, PaymentMethod } from "@/lib/invoice";
@@ -121,11 +121,13 @@ function getDuitkuErrorMessage(code?: string) {
   return "Gagal menyiapkan transaksi Duitku Sandbox. Silakan coba lagi.";
 }
 
-export function CheckoutClient() {
+interface CheckoutClientProps {
+  initialPlanId?: string | null;
+}
+
+export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const planId = searchParams.get("plan");
-  const selectedPlan = useMemo(() => getCheckoutPlan(planId), [planId]);
+  const selectedPlan = useMemo(() => getCheckoutPlan(initialPlanId), [initialPlanId]);
 
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");

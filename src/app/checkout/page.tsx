@@ -6,7 +6,23 @@ export const metadata = {
   description: "Lengkapi data pemesan untuk memulai checkout layanan website Digital Carroll Base.",
 };
 
-export default function CheckoutPage() {
+type CheckoutSearchParams = Promise<{
+  plan?: string | string[];
+}>;
+
+function getPlanId(searchParams: Awaited<CheckoutSearchParams>) {
+  const plan = searchParams.plan;
+  return Array.isArray(plan) ? plan[0] : plan;
+}
+
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams?: CheckoutSearchParams;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const planId = getPlanId(resolvedSearchParams);
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
       <section className="mb-8 max-w-3xl">
@@ -25,7 +41,7 @@ export default function CheckoutPage() {
           </div>
         }
       >
-        <CheckoutClient />
+        <CheckoutClient initialPlanId={planId} />
       </Suspense>
     </div>
   );
