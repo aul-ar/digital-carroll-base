@@ -1,46 +1,48 @@
 "use client";
 
-import { InvoiceData, InvoiceStatus } from "@/lib/invoice";
+import { Invoice, InvoiceStatus } from "@/lib/invoice";
 
-const STORAGE_KEY = "dcb_invoices";
+const INVOICE_IDS_KEY = "dcb_invoice_ids";
 const LATEST_KEY = "dcb_latest_invoice_id";
 
-function readAll(): InvoiceData[] {
+function getInvoiceKey(invoiceId: string) {
+  return `dcb_invoice_${invoiceId}`;
+}
+
+function readInvoiceIds() {
   if (typeof window === "undefined") {
     return [];
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as InvoiceData[]) : [];
+    const raw = window.localStorage.getItem(INVOICE_IDS_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeAll(invoices: InvoiceData[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
-  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
+function writeInvoiceIds(invoiceIds: string[]) {
+  window.localStorage.setItem(INVOICE_IDS_KEY, JSON.stringify(invoiceIds));
 }
 
-export function saveInvoice(invoice: InvoiceData) {
-  const invoices = readAll();
-  const nextInvoices = [invoice, ...invoices.filter((item) => item.invoiceId !== invoice.invoiceId)];
-  writeAll(nextInvoices);
+export function saveInvoice(invoice: Invoice) {
+  const invoiceIds = readInvoiceIds();
+  const nextInvoiceIds = [invoice.invoiceId, ...invoiceIds.filter((id) => id !== invoice.invoiceId)];
+
+  window.localStorage.setItem(getInvoiceKey(invoice.invoiceId), JSON.stringify(invoice));
+  writeInvoiceIds(nextInvoiceIds);
   window.sessionStorage.setItem(LATEST_KEY, invoice.invoiceId);
 }
 
 export function getStoredInvoice(invoiceId: string) {
-  const localInvoice = readAll().find((invoice) => invoice.invoiceId === invoiceId);
-
-  if (localInvoice) {
-    return localInvoice;
+  if (typeof window === "undefined") {
+    return null;
   }
 
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    const invoices = raw ? (JSON.parse(raw) as InvoiceData[]) : [];
-    return invoices.find((invoice) => invoice.invoiceId === invoiceId) ?? null;
+    const raw = window.localStorage.getItem(getInvoiceKey(invoiceId));
+    return raw ? (JSON.parse(raw) as Invoice) : null;
   } catch {
     return null;
   }
@@ -51,18 +53,21 @@ export function getLatestInvoiceId() {
     return null;
   }
 
-  return window.sessionStorage.getItem(LATEST_KEY) ?? readAll()[0]?.invoiceId ?? null;
+  return window.sessionStorage.getItem(LATEST_KEY) ?? readInvoiceIds()[0] ?? null;
 }
 
 export function updateStoredInvoiceStatus(invoiceId: string, status: InvoiceStatus) {
-  const invoices = readAll();
-  const invoice = invoices.find((item) => item.invoiceId === invoiceId);
+  const invoice = getStoredInvoice(invoiceId);
 
   if (!invoice) {
     return null;
   }
 
-  const updated = { ...invoice, paymentStatus: status, paidAt: status === "paid" ? new Date().toISOString() : invoice.paidAt };
-  writeAll(invoices.map((item) => (item.invoiceId === invoiceId ? updated : item)));
+  const updated = {
+    ...invoice,
+    paymentStatus: status,
+    paidAt: status === "paid" ? new Date().toISOString() : invoice.paidAt,
+  };
+  saveInvoice(updated);
   return updated;
 }

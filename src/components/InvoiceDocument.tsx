@@ -6,10 +6,10 @@ import {
   buildWhatsAppInvoiceMessage,
   formatCurrency,
   formatDate,
+  getPaymentMethodLabel,
   Invoice,
   isManualPayment,
   manualPaymentDetails,
-  paymentMethodLabels,
   statusLabels,
 } from "@/lib/invoice";
 import { getWhatsAppLink } from "@/utils/whatsapp";
@@ -128,7 +128,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               </div>
               <div>
                 <dt className="text-slate-500 dark:text-slate-400">Nama bisnis / brand</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.businessName}</dd>
+                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.businessName || "-"}</dd>
               </div>
             </dl>
           </div>
@@ -174,7 +174,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           <h2 className="text-sm font-bold text-slate-950 dark:text-white">Detail Pesanan</h2>
           <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950">
             <span className="text-slate-500 dark:text-slate-400">Metode Pembayaran: </span>
-            <span className="font-bold text-slate-900 dark:text-white">{paymentMethodLabels[invoice.paymentMethod]}</span>
+            <span className="font-bold text-slate-900 dark:text-white">{getPaymentMethodLabel(invoice.paymentMethod)}</span>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full min-w-[620px] text-left text-sm">

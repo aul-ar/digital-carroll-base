@@ -3,22 +3,21 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
-import { InvoiceStatus } from "@/lib/invoice";
-import { getLatestInvoiceId } from "@/lib/invoice-storage";
+
+type PaymentPageStatus = "pending" | "success" | "failed";
 
 const content = {
-  paid: {
-    icon: CheckCircle2,
-    title: "Pembayaran Berhasil",
-    description: "Terima kasih. Pembayaran Anda berhasil diproses.",
-    className: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/25 dark:text-emerald-300",
-  },
   pending: {
     icon: Clock3,
     title: "Pembayaran Menunggu",
-    description: "Invoice telah dibuat dan menunggu pembayaran.",
+    description: "Invoice telah dibuat dan menunggu pembayaran atau konfirmasi.",
     className: "text-amber-600 bg-amber-50 dark:bg-amber-950/25 dark:text-amber-300",
+  },
+  success: {
+    icon: CheckCircle2,
+    title: "Pembayaran Berhasil",
+    description: "Terima kasih. Status final invoice akan mengikuti konfirmasi pembayaran atau callback Duitku Sandbox.",
+    className: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/25 dark:text-emerald-300",
   },
   failed: {
     icon: XCircle,
@@ -28,12 +27,11 @@ const content = {
   },
 };
 
-export function PaymentResult({ status }: { status: InvoiceStatus }) {
+export function PaymentResult({ status }: { status: PaymentPageStatus }) {
   const searchParams = useSearchParams();
-  const queryInvoiceId = searchParams.get("invoiceId");
-  const [latestInvoiceId] = useState(() => getLatestInvoiceId());
-  const invoiceId = queryInvoiceId ?? latestInvoiceId;
-  const view = useMemo(() => content[status === "expired" ? "failed" : status], [status]);
+  const orderId = searchParams.get("orderId");
+  const invoiceId = searchParams.get("invoiceId");
+  const view = content[status];
   const Icon = view.icon;
 
   return (
@@ -44,20 +42,36 @@ export function PaymentResult({ status }: { status: InvoiceStatus }) {
         </div>
         <h1 className="mt-5 text-2xl font-extrabold text-slate-950 dark:text-white">{view.title}</h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{view.description}</p>
+        {orderId && (
+          <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+            Order ID: {orderId}
+          </p>
+        )}
+        {invoiceId && (
+          <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+            Invoice ID: {invoiceId}
+          </p>
+        )}
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           {invoiceId && (
             <Link
               href={`/invoice/${invoiceId}`}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-500"
             >
               Lihat Invoice
             </Link>
           )}
           <Link
             href="/"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500"
           >
             Kembali ke Beranda
+          </Link>
+          <Link
+            href="/checkout?plan=plan-landing-page"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Kembali ke Checkout
           </Link>
         </div>
       </div>

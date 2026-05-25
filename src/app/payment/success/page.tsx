@@ -8,7 +8,7 @@ export const metadata = {
 export default function PaymentSuccessPage() {
   return (
     <Suspense fallback={null}>
-      <PaymentResult status="paid" />
+      <PaymentResult status="success" />
     </Suspense>
   );
 }

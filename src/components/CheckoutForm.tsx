@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
-import { getCheckoutPackage } from "@/lib/checkout-packages";
+import { getCheckoutPlan } from "@/lib/checkout-packages";
 import { createInvoiceData, PaymentMethod } from "@/lib/invoice";
 import { saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
@@ -96,17 +96,19 @@ function isManualPayment(method: PaymentMethod | "") {
 export function CheckoutForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedPackageId = searchParams.get("package");
-  const selectedPackage = useMemo(() => getCheckoutPackage(selectedPackageId), [selectedPackageId]);
+  const planId = searchParams.get("plan");
+  const selectedPlan = useMemo(() => getCheckoutPlan(planId), [planId]);
 
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [manualInvoiceId, setManualInvoiceId] = useState("");
 
   function updateCustomer(field: keyof CheckoutCustomer, value: string) {
     setCustomer((current) => ({ ...current, [field]: value }));
+    setError("");
   }
 
   function validateForm() {
@@ -126,11 +128,25 @@ export function CheckoutForm() {
       return "Nomor WhatsApp wajib diisi.";
     }
 
-    if (!paymentMethod) {
-      return "Silakan pilih metode pembayaran terlebih dahulu.";
+    return "";
+  }
+
+  function validateCheckout() {
+    const validationMessage = validateForm();
+
+    if (validationMessage) {
+      setError(validationMessage);
+      return false;
     }
 
-    return "";
+    if (!selectedPaymentMethod) {
+      setPaymentError("Silakan pilih metode pembayaran terlebih dahulu.");
+      return false;
+    }
+
+    setError("");
+    setPaymentError("");
+    return true;
   }
 
   function createPendingInvoice(method: PaymentMethod) {
@@ -140,9 +156,9 @@ export function CheckoutForm() {
       customerEmail: customer.email,
       customerWhatsapp: customer.whatsapp,
       businessName: customer.businessName,
-      packageName: selectedPackage.name,
-      packageDescription: selectedPackage.description,
-      packagePrice: selectedPackage.price,
+      packageName: selectedPlan.name,
+      packageDescription: selectedPlan.description,
+      packagePrice: selectedPlan.price,
       notes: customer.notes,
     });
 
@@ -151,7 +167,7 @@ export function CheckoutForm() {
   }
 
   function handleAutomaticPayment(method: PaymentMethod) {
-    setIsLoading(true);
+    setIsProcessing(true);
     const invoice = createPendingInvoice(method);
 
     window.setTimeout(() => {
@@ -160,46 +176,50 @@ export function CheckoutForm() {
   }
 
   function handleManualPayment(method: PaymentMethod) {
-    setIsLoading(true);
+    setIsProcessing(true);
     const invoice = createPendingInvoice(method);
-    const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${selectedPackage.name}. Nama saya ${customer.fullName}.`;
+    const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${selectedPlan.name}. Nama saya ${customer.fullName}.`;
     setManualInvoiceId(invoice.invoiceId);
     window.open(getWhatsAppLink(message), "_blank", "noopener,noreferrer");
-    window.setTimeout(() => setIsLoading(false), 500);
+    window.setTimeout(() => {
+      setIsProcessing(false);
+      router.push(`/invoice/${invoice.invoiceId}`);
+    }, 500);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validationMessage = validateForm();
 
-    if (validationMessage) {
-      setError(validationMessage);
+    if (!validateCheckout()) {
       return;
     }
 
-    setError("");
+    const method = selectedPaymentMethod;
 
-    if (!paymentMethod) {
+    if (!method) {
       return;
     }
 
-    if (isManualPayment(paymentMethod)) {
-      handleManualPayment(paymentMethod);
+    if (isManualPayment(method)) {
+      handleManualPayment(method);
       return;
     }
 
-    handleAutomaticPayment(paymentMethod);
+    handleAutomaticPayment(method);
   }
 
   function renderPaymentCard(option: PaymentOption) {
     const Icon = option.icon;
-    const selected = paymentMethod === option.id;
+    const selected = selectedPaymentMethod === option.id;
 
     return (
       <button
         key={option.id}
         type="button"
-        onClick={() => setPaymentMethod(option.id)}
+        onClick={() => {
+          setSelectedPaymentMethod(option.id);
+          setPaymentError("");
+        }}
         className={`w-full rounded-2xl border p-4 text-left transition ${
           selected
             ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
@@ -246,9 +266,9 @@ export function CheckoutForm() {
     );
   }
 
-  const submitLabel = isLoading
+  const submitLabel = isProcessing
     ? "Memproses..."
-    : isManualPayment(paymentMethod)
+    : isManualPayment(selectedPaymentMethod)
       ? "Konfirmasi via WhatsApp"
       : "Lanjutkan Pembayaran";
 
@@ -259,7 +279,7 @@ export function CheckoutForm() {
           <div className="mb-5">
             <h2 className="text-lg font-bold text-slate-950 dark:text-white">Form Data Pemesan</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Data ini digunakan untuk verifikasi pesanan dan briefing awal.
+              Lengkapi data utama agar tim Digital Carroll Base dapat menyiapkan proses briefing.
             </p>
           </div>
 
@@ -316,13 +336,19 @@ export function CheckoutForm() {
               />
             </label>
           </div>
+
+          {error && (
+            <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/25 dark:text-red-300">
+              {error}
+            </p>
+          )}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <div className="mb-5">
             <h2 className="text-lg font-bold text-slate-950 dark:text-white">Pilih Metode Pembayaran</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Pilih pembayaran otomatis via Duitku Sandbox atau metode manual cadangan.
+            <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              Silakan pilih metode pembayaran yang paling sesuai. Pembayaran otomatis akan diproses melalui Duitku Sandbox, sedangkan pembayaran manual memerlukan konfirmasi melalui WhatsApp.
             </p>
           </div>
 
@@ -342,9 +368,9 @@ export function CheckoutForm() {
             </div>
           </div>
 
-          {error && (
+          {paymentError && (
             <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/25 dark:text-red-300">
-              {error}
+              {paymentError}
             </p>
           )}
 
@@ -360,11 +386,11 @@ export function CheckoutForm() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isProcessing}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/15 transition hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitLabel}
-              {!isLoading && <ArrowRight className="h-4 w-4" />}
+              {!isProcessing && <ArrowRight className="h-4 w-4" />}
             </button>
             <Link
               href="/"
@@ -379,22 +405,22 @@ export function CheckoutForm() {
 
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-28">
         <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Ringkasan Pesanan</p>
-        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{selectedPackage.name}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{selectedPackage.description}</p>
+        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{selectedPlan.name}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{selectedPlan.description}</p>
 
         <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
           <div className="flex justify-between gap-4">
-            <span className="text-slate-500 dark:text-slate-400">Package ID</span>
-            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{selectedPackage.id}</span>
+            <span className="text-slate-500 dark:text-slate-400">Plan ID</span>
+            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{selectedPlan.id}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Harga</span>
-            <span className="text-right font-extrabold text-slate-950 dark:text-white">{selectedPackage.price}</span>
+            <span className="text-right font-extrabold text-slate-950 dark:text-white">{selectedPlan.priceLabel}</span>
           </div>
         </div>
 
         <p className="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-          Harga final dapat menyesuaikan scope halaman, konten, fitur, domain, hosting, dan integrasi tambahan.
+          Harga dapat menyesuaikan scope final, domain, hosting, aset premium, dan integrasi tambahan.
         </p>
       </aside>
     </form>

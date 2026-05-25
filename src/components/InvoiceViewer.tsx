@@ -10,24 +10,11 @@ export function InvoiceViewer({ invoiceId }: { invoiceId: string }) {
   const [invoice, setInvoice] = useState<Invoice | null | undefined>(undefined);
 
   useEffect(() => {
-    async function loadInvoice() {
-      const localInvoice = getStoredInvoice(invoiceId);
-      if (localInvoice) {
-        setInvoice(localInvoice);
-        return;
-      }
+    const timeoutId = window.setTimeout(() => {
+      setInvoice(getStoredInvoice(invoiceId));
+    }, 0);
 
-      const response = await fetch(`/api/invoice/${invoiceId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setInvoice(data.invoice);
-        return;
-      }
-
-      setInvoice(null);
-    }
-
-    loadInvoice();
+    return () => window.clearTimeout(timeoutId);
   }, [invoiceId]);
 
   if (invoice === undefined) {
@@ -46,14 +33,22 @@ export function InvoiceViewer({ invoiceId }: { invoiceId: string }) {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <h1 className="text-2xl font-extrabold text-slate-950 dark:text-white">Invoice tidak ditemukan</h1>
           <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-            Untuk MVP tanpa database, invoice tersimpan di browser yang digunakan saat checkout.
+            Data invoice tidak tersedia di perangkat ini atau sudah terhapus.
           </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-500"
-          >
-            Kembali ke Beranda
-          </Link>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-500"
+            >
+              Kembali ke Beranda
+            </Link>
+            <Link
+              href="/checkout?plan=plan-landing-page"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Buat Pesanan Baru
+            </Link>
+          </div>
         </div>
       </div>
     );

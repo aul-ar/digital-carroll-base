@@ -1,56 +1,58 @@
-export interface CheckoutPackage {
+export interface CheckoutPlan {
   id: string;
   name: string;
-  price: string;
+  price: number;
+  priceLabel: string;
   description: string;
 }
 
-export const checkoutPackages: CheckoutPackage[] = [
+export const checkoutPlans: CheckoutPlan[] = [
   {
-    id: "landing-page",
+    id: "plan-landing-page",
     name: "Landing Page Basic",
-    price: "Rp499.000",
+    price: 499000,
+    priceLabel: "Rp499.000",
     description: "Website landing page profesional untuk promosi jasa, produk, atau personal brand.",
   },
   {
-    id: "company-profile",
+    id: "plan-company-profile",
     name: "Company Profile Website",
-    price: "Rp999.000",
+    price: 999000,
+    priceLabel: "Rp999.000",
     description: "Website profil bisnis dengan halaman informasi layanan, kontak, dan identitas brand.",
   },
   {
-    id: "online-store",
+    id: "plan-online-store",
     name: "Online Store Starter",
-    price: "Rp1.999.000",
-    description: "Website katalog/online store sederhana untuk menampilkan produk dan menerima pesanan.",
+    price: 1999000,
+    priceLabel: "Rp1.999.000",
+    description: "Website katalog atau toko online sederhana untuk menampilkan produk dan menerima pesanan.",
   },
   {
-    id: "custom-website",
+    id: "plan-custom-website",
     name: "Custom Website",
-    price: "Mulai dari Rp2.499.000",
+    price: 2499000,
+    priceLabel: "Mulai dari Rp2.499.000",
     description: "Website custom sesuai kebutuhan bisnis, fitur, dan integrasi tambahan.",
   },
 ];
 
-export function getCheckoutPackage(packageId?: string | null) {
-  return checkoutPackages.find((item) => item.id === packageId) ?? checkoutPackages[0];
+export function getCheckoutPlan(planId?: string | null) {
+  return checkoutPlans.find((plan) => plan.id === planId) ?? checkoutPlans[0];
 }
 
-export function getPackageIdFromPricingPlan(planId: string, serviceSlug?: string) {
-  const normalizedId = planId.replace(/^plan-/, "");
-  const slug = serviceSlug ?? normalizedId;
-
-  if (slug === "landing-page") {
-    return "landing-page";
+export function getPlanIdFromPricingPlan(planId: string, serviceSlug?: string) {
+  if (planId === "plan-landing-page" || serviceSlug === "landing-page") {
+    return "plan-landing-page";
   }
 
-  if (slug === "company-profile") {
-    return "company-profile";
+  if (planId === "plan-company-profile" || serviceSlug === "company-profile") {
+    return "plan-company-profile";
   }
 
-  if (slug === "online-store-sederhana" || slug === "katalog-produk") {
-    return "online-store";
+  if (planId === "plan-online-store-sederhana" || serviceSlug === "online-store-sederhana" || serviceSlug === "katalog-produk") {
+    return "plan-online-store";
   }
 
-  return "custom-website";
+  return "plan-custom-website";
 }

@@ -15,7 +15,7 @@ export default function CheckoutPage() {
           Lengkapi Pemesanan Website
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
-          Isi data pemesan dan ringkasan kebutuhan website. Tahap pilihan pembayaran akan disambungkan setelah data checkout siap.
+          Isi data pemesan dan ringkasan kebutuhan website. Metode pembayaran akan ditambahkan pada tahap berikutnya.
         </p>
       </section>
       <Suspense fallback={<div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">Memuat checkout...</div>}>

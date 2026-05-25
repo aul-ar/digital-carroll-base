@@ -17,14 +17,14 @@ export interface InvoiceData {
   customerName: string;
   customerEmail: string;
   customerWhatsapp: string;
-  businessName: string;
+  businessName?: string;
   packageName: string;
   packageDescription: string;
   quantity: number;
   price: number;
   subtotal: number;
   total: number;
-  notes: string;
+  notes?: string;
 }
 
 export type Invoice = InvoiceData;
@@ -50,6 +50,10 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   bank_transfer_manual: "Transfer Bank BCA Manual",
   ewallet_manual: "E-Wallet Manual",
 };
+
+export function getPaymentMethodLabel(method: PaymentMethod) {
+  return paymentMethodLabels[method];
+}
 
 export const statusLabels: Record<InvoiceStatus, string> = {
   pending: "Menunggu Pembayaran",
@@ -125,12 +129,12 @@ export function createInvoiceData(input: {
   customerName: string;
   customerEmail: string;
   customerWhatsapp: string;
-  businessName: string;
+  businessName?: string;
   packageName: string;
   packageDescription: string;
   packagePrice: string | number;
-  notes: string;
-}) {
+  notes?: string;
+}): Invoice {
   const { orderId, invoiceId } = generateOrderInvoiceIds();
   const price =
     typeof input.packagePrice === "number"
@@ -164,9 +168,9 @@ export function buildWhatsAppInvoiceMessage(invoice: InvoiceData) {
     `Invoice: ${invoice.invoiceId}`,
     `Order ID: ${invoice.orderId}`,
     `Nama: ${invoice.customerName}`,
-    `Bisnis/Brand: ${invoice.businessName}`,
+    `Bisnis/Brand: ${invoice.businessName || "-"}`,
     `Layanan: ${invoice.packageName}`,
     `Total: ${formatCurrency(invoice.total)}`,
-    `Metode: ${paymentMethodLabels[invoice.paymentMethod]}`,
+    `Metode: ${getPaymentMethodLabel(invoice.paymentMethod)}`,
   ].join("\n");
 }
