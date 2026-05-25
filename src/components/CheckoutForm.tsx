@@ -9,6 +9,16 @@ import { createInvoiceData, PaymentMethod } from "@/lib/invoice";
 import { saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
+interface DuitkuCreateTransactionResponse {
+  success: boolean;
+  data?: {
+    reference?: string;
+    paymentUrl?: string;
+    vaNumber?: string;
+    qrString?: string;
+  };
+}
+
 interface CheckoutCustomer {
   fullName: string;
   email: string;
@@ -166,13 +176,63 @@ export function CheckoutForm() {
     return invoice;
   }
 
-  function handleAutomaticPayment(method: PaymentMethod) {
+  async function handleAutomaticPayment(method: PaymentMethod) {
     setIsProcessing(true);
     const invoice = createPendingInvoice(method);
 
-    window.setTimeout(() => {
+    try {
+      const response = await fetch("/api/duitku/create-transaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: invoice.customerName,
+          customerEmail: invoice.customerEmail,
+          customerWhatsapp: invoice.customerWhatsapp,
+          packageName: invoice.packageName,
+          packageDescription: invoice.packageDescription,
+          amount: invoice.total,
+          paymentMethod: invoice.paymentMethod,
+          invoiceId: invoice.invoiceId,
+          orderId: invoice.orderId,
+        }),
+      });
+
+      const transaction = (await response.json()) as DuitkuCreateTransactionResponse;
+
+      if (!response.ok || !transaction.success) {
+        throw new Error("Duitku Sandbox preparation failed.");
+      }
+
+      const updatedInvoice = {
+        ...invoice,
+        provider: "duitku" as const,
+        providerReference: transaction.data?.reference,
+        providerPaymentUrl: transaction.data?.paymentUrl,
+        vaNumber: transaction.data?.vaNumber,
+        qrString: transaction.data?.qrString,
+        merchantOrderId: invoice.orderId,
+        paymentStatus: "pending" as const,
+      };
+
+      saveInvoice(updatedInvoice);
+
+      if (transaction.data?.paymentUrl) {
+        try {
+          const paymentUrl = new URL(transaction.data.paymentUrl);
+          window.location.assign(paymentUrl.toString());
+          return;
+        } catch {
+          setPaymentError("Transaksi berhasil dibuat, tetapi halaman pembayaran belum tersedia. Silakan buka invoice atau hubungi admin.");
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       router.push(`/payment/pending?invoiceId=${invoice.invoiceId}`);
-    }, 450);
+    } catch {
+      setPaymentError("Gagal menyiapkan transaksi Duitku Sandbox. Silakan coba lagi.");
+      setIsProcessing(false);
+    }
   }
 
   function handleManualPayment(method: PaymentMethod) {

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Invoice } from "@/lib/invoice";
+import { getInvoiceFromStorage } from "@/lib/invoice-storage";
 
 type PaymentPageStatus = "pending" | "success" | "failed";
 
@@ -16,7 +19,7 @@ const content = {
   success: {
     icon: CheckCircle2,
     title: "Pembayaran Berhasil",
-    description: "Terima kasih. Status final invoice akan mengikuti konfirmasi pembayaran atau callback Duitku Sandbox.",
+    description: "Pembayaran berhasil diproses oleh gateway jika transaksi sudah selesai. Simpan invoice Anda sebagai bukti pemesanan.",
     className: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/25 dark:text-emerald-300",
   },
   failed: {
@@ -31,8 +34,21 @@ export function PaymentResult({ status }: { status: PaymentPageStatus }) {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const invoiceId = searchParams.get("invoiceId");
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const view = content[status];
   const Icon = view.icon;
+
+  useEffect(() => {
+    if (!invoiceId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setInvoice(getInvoiceFromStorage(invoiceId));
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [invoiceId]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 pb-16">
@@ -52,7 +68,22 @@ export function PaymentResult({ status }: { status: PaymentPageStatus }) {
             Invoice ID: {invoiceId}
           </p>
         )}
+        {status === "pending" && (
+          <p className="mt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            Status akan diperbarui setelah pembayaran dikonfirmasi. Untuk MVP tanpa database, invoice lokal tetap berstatus pending.
+          </p>
+        )}
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          {status === "pending" && invoice?.providerPaymentUrl && (
+            <a
+              href={invoice.providerPaymentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500"
+            >
+              Buka Halaman Pembayaran Duitku
+            </a>
+          )}
           {invoiceId && (
             <Link
               href={`/invoice/${invoiceId}`}

@@ -176,6 +176,40 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <span className="text-slate-500 dark:text-slate-400">Metode Pembayaran: </span>
             <span className="font-bold text-slate-900 dark:text-white">{getPaymentMethodLabel(invoice.paymentMethod)}</span>
           </div>
+          {(invoice.providerReference || invoice.providerPaymentUrl || invoice.vaNumber || invoice.qrString) && (
+            <div className="mt-3 grid gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950/20 sm:grid-cols-2">
+              {invoice.providerReference && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Reference Duitku</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{invoice.providerReference}</p>
+                </div>
+              )}
+              {invoice.vaNumber && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Nomor Virtual Account</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{invoice.vaNumber}</p>
+                </div>
+              )}
+              {invoice.qrString && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">QRIS</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">QRIS tersedia dari transaksi Duitku Sandbox.</p>
+                </div>
+              )}
+              {invoice.providerPaymentUrl && invoice.paymentStatus === "pending" && (
+                <div className="sm:col-span-2">
+                  <a
+                    href={invoice.providerPaymentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500"
+                  >
+                    Buka Halaman Pembayaran
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full min-w-[620px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-800/70 dark:text-slate-400">

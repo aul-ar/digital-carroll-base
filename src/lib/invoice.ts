@@ -25,6 +25,12 @@ export interface InvoiceData {
   subtotal: number;
   total: number;
   notes?: string;
+  provider?: "duitku";
+  providerReference?: string;
+  providerPaymentUrl?: string;
+  vaNumber?: string;
+  qrString?: string;
+  merchantOrderId?: string;
 }
 
 export type Invoice = InvoiceData;

@@ -35,6 +35,10 @@ export function saveInvoice(invoice: Invoice) {
   window.sessionStorage.setItem(LATEST_KEY, invoice.invoiceId);
 }
 
+export function saveInvoiceToStorage(invoice: Invoice) {
+  saveInvoice(invoice);
+}
+
 export function getStoredInvoice(invoiceId: string) {
   if (typeof window === "undefined") {
     return null;
@@ -46,6 +50,10 @@ export function getStoredInvoice(invoiceId: string) {
   } catch {
     return null;
   }
+}
+
+export function getInvoiceFromStorage(invoiceId: string) {
+  return getStoredInvoice(invoiceId);
 }
 
 export function getLatestInvoiceId() {
@@ -70,4 +78,9 @@ export function updateStoredInvoiceStatus(invoiceId: string, status: InvoiceStat
   };
   saveInvoice(updated);
   return updated;
+}
+
+export function updateInvoiceInStorage(invoice: Invoice) {
+  saveInvoice(invoice);
+  return invoice;
 }
