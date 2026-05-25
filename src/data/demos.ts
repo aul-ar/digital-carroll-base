@@ -15,12 +15,12 @@ export const demos: Demo[] = [
     title: "Carroll Coffee - Landing Page Kedai Kopi",
     slug: "landing-page",
     category: "Food & Beverage / Cafe",
-    description: "Contoh landing page modern untuk usaha kuliner/kafe. Dilengkapi menu highlight, galeri suasana, ulasan pelanggan, lokasi Google Maps, dan tombol booking meja langsung via WhatsApp.",
+    description: "Contoh landing page modern untuk usaha kuliner/kafe. Dilengkapi menu highlight, galeri suasana, ulasan pelanggan, lokasi Google Maps, dan tombol booking/konsultasi yang jelas.",
     features: [
       "Hero Section Menarik dengan Gambar Kopi Estetik",
       "Menu Favorit Showcase dengan Tag Harga",
       "Social Proof (Testimoni Pelanggan)",
-      "Floating WhatsApp Booking Button",
+      "Floating Booking dan Contact Button",
       "Peta Lokasi & Jam Operasional Terintegrasi"
     ],
     thumbnailColor: "from-amber-700 via-amber-800 to-yellow-900",
@@ -47,13 +47,13 @@ export const demos: Demo[] = [
     title: "Carroll Wear - Katalog Fashion & Hijab",
     slug: "katalog-produk",
     category: "Retail / Fashion / UMKM Toko",
-    description: "Contoh katalog produk online interaktif untuk toko fashion, hijab, aksesoris, atau produk fisik lainnya. Memungkinkan pengunjung memfilter kategori, melihat foto detail, dan melakukan pemesanan via WhatsApp secara otomatis.",
+    description: "Contoh katalog produk online interaktif untuk toko fashion, hijab, aksesoris, atau produk fisik lainnya. Memungkinkan pengunjung memfilter kategori, melihat foto detail, dan melanjutkan pemesanan melalui alur yang jelas.",
     features: [
       "Filter Kategori Instan (All, Pakaian, Aksesoris, Tas)",
       "Pencarian Produk Real-time",
       "Badge Promo/Diskon Menarik",
       "Halaman Detail Produk Modal / Pop-up",
-      "Keranjang Belanja Ringan untuk Checkout WA Cepat"
+      "Keranjang Belanja Ringan untuk Checkout Cepat"
     ],
     thumbnailColor: "from-purple-600 via-pink-600 to-red-500",
     previewUrl: "/demo/katalog-produk"
@@ -63,13 +63,13 @@ export const demos: Demo[] = [
     title: "Carroll Portfolio - Website Personal Profesional",
     slug: "website-portfolio",
     category: "Personal Branding / Portfolio",
-    description: "Demo website portfolio personal yang menampilkan hero profile, skill section, portofolio proyek, pengalaman kerja, dan tombol kontak WhatsApp.",
+    description: "Demo website portfolio personal yang menampilkan hero profile, skill section, portofolio proyek, pengalaman kerja, dan tombol kontak.",
     features: [
       "Hero profil personal dengan CTA kontak",
       "Section skill & pengalaman kerja",
       "Galeri proyek atau karya unggulan",
       "Testimonial singkat atau rekomendasi",
-      "Form kontak langsung ke WhatsApp"
+      "Form kontak langsung"
     ],
     thumbnailColor: "from-sky-600 via-cyan-500 to-blue-700",
     previewUrl: "/demo/website-portfolio"
@@ -79,12 +79,12 @@ export const demos: Demo[] = [
     title: "Carroll Store - Online Store Sederhana",
     slug: "online-store-sederhana",
     category: "Retail / Shop",
-    description: "Demo toko online sederhana dengan katalog produk, detail item, ringkasan keranjang, dan checkout langsung ke WhatsApp.",
+    description: "Demo toko online sederhana dengan katalog produk, detail item, ringkasan keranjang, dan checkout langsung melalui website.",
     features: [
       "Katalog produk responsif dan rapi",
       "Detail produk lengkap dengan harga",
       "Ringkasan keranjang pembelian sederhana",
-      "Checkout langsung via WhatsApp",
+      "Checkout langsung melalui website",
       "Label promo dan produk populer"
     ],
     thumbnailColor: "from-emerald-600 via-lime-600 to-emerald-700",
@@ -117,7 +117,7 @@ export const demos: Demo[] = [
       "Form pendaftaran atau RSVP online",
       "Desain custom sesuai tujuan acara",
       "Call-to-action yang terarah",
-      "Kontak WhatsApp langsung untuk konversi cepat"
+      "Kontak langsung untuk konversi cepat"
     ],
     thumbnailColor: "from-amber-600 via-orange-600 to-rose-600",
     previewUrl: "/demo/website-sesuai-kebutuhan"

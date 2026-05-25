@@ -63,7 +63,7 @@ export default function DemoKatalogProduk() {
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  // Generate checkout WA link
+  // Generate checkout confirmation link
   const getCheckoutLink = () => {
     if (cart.length === 0) return "#";
     
@@ -360,13 +360,13 @@ export default function DemoKatalogProduk() {
                     cart.length === 0 ? "pointer-events-none opacity-50" : ""
                   }`}
                 >
-                  <span>Checkout WA</span>
+                  <span>Konfirmasi Pesanan</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
 
               <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-                Pemesanan Anda akan dirangkum rapi dan dialihkan otomatis ke chat WhatsApp kami untuk validasi pesanan & detail ongkir.
+                Pemesanan Anda akan dirangkum rapi untuk validasi pesanan dan detail ongkir.
               </p>
             </div>
 

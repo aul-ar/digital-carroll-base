@@ -17,12 +17,12 @@ export const services: Service[] = [
     title: "Landing Page Bisnis",
     slug: "landing-page",
     shortDescription: "Halaman penawaran satu halaman (one-page) yang dioptimalkan khusus untuk meningkatkan penjualan dan konversi iklan Anda.",
-    fullDescription: "Landing Page Bisnis adalah solusi untuk Anda yang ingin mempromosikan produk spesifik, jasa, acara, atau menjalankan kampanye iklan berbayar (Google Ads, Facebook Ads, TikTok Ads). Didesain dengan struktur copywriting yang persuasif, struktur website ringan, dan tombol call-to-action (CTA) yang jelas mengarah ke WhatsApp Anda.",
+    fullDescription: "Landing Page Bisnis adalah solusi untuk Anda yang ingin mempromosikan produk spesifik, jasa, acara, atau menjalankan kampanye iklan berbayar (Google Ads, Facebook Ads, TikTok Ads). Didesain dengan struktur copywriting yang persuasif, struktur website ringan, dan call-to-action (CTA) yang jelas untuk checkout website maupun konsultasi.",
     features: [
       "Desain Responsif & Mobile-Friendly",
       "Struktur Copywriting Persuasif",
       "Hingga 5-7 Bagian Halaman",
-      "Form Kontak / Pemesanan Langsung via WhatsApp",
+      "Form Kontak dan Checkout Website",
       "Integrasi Tracking (Pixel, Analytics)",
       "Bantuan Deploy & Custom Domain",
       "Kecepatan Loading Maksimal (Speed Optimized)"
@@ -66,13 +66,13 @@ export const services: Service[] = [
     id: "katalog-produk",
     title: "Katalog Produk Online",
     slug: "katalog-produk",
-    shortDescription: "Website katalog produk interaktif dengan kategori, detail produk, dan sistem order langsung terhubung ke WhatsApp penjual.",
-    fullDescription: "Katalog Produk Online adalah pilihan praktis bagi bisnis ritel atau UMKM yang memiliki banyak produk tetapi belum memerlukan sistem e-commerce penuh dengan payment gateway yang rumit. Pelanggan dapat menjelajahi produk Anda secara interaktif, memfilter berdasarkan kategori, melihat detail produk, dan memesan produk yang diminati via WhatsApp otomatis beserta detail pesanannya.",
+    shortDescription: "Website katalog produk interaktif dengan kategori, detail produk, dan alur pemesanan yang jelas untuk calon pembeli.",
+    fullDescription: "Katalog Produk Online adalah pilihan praktis bagi bisnis ritel atau UMKM yang ingin menampilkan banyak produk dengan rapi. Pelanggan dapat menjelajahi produk Anda secara interaktif, memfilter berdasarkan kategori, melihat detail produk, dan melanjutkan pemesanan melalui alur checkout atau konfirmasi yang tersedia.",
     features: [
       "Showcase Produk Interaktif & Galeri Foto",
       "Filter Kategori & Pencarian Produk",
       "Halaman Detail Produk Lengkap",
-      "Tombol 'Beli via WhatsApp' dengan data produk otomatis",
+      "Tombol Pesan dengan Detail Produk Otomatis",
       "Manajemen Produk yang Mudah & Ringan",
       "Responsif di Semua Layar Gadget",
       "Bantuan Deploy & Custom Domain"
@@ -92,12 +92,12 @@ export const services: Service[] = [
     title: "Website Portfolio",
     slug: "website-portfolio",
     shortDescription: "Website personal untuk menampilkan profil, pengalaman, skill, project, dan kontak profesional.",
-    fullDescription: "Website Portfolio membantu Anda membangun reputasi profesional online dengan halaman yang menonjolkan personal brand, keahlian, portofolio proyek, dan cara cepat untuk dihubungi melalui WhatsApp.",
+    fullDescription: "Website Portfolio membantu Anda membangun reputasi profesional online dengan halaman yang menonjolkan personal brand, keahlian, portofolio proyek, dan cara cepat untuk dihubungi.",
     features: [
       "Profil personal profesional",
       "Section skill dan pengalaman",
       "Galeri project atau karya",
-      "Tombol kontak langsung WhatsApp",
+      "Tombol kontak langsung",
       "Testimonial klien atau rekomendasi",
       "Responsif di semua perangkat"
     ],
@@ -105,7 +105,7 @@ export const services: Service[] = [
       "Menonjolkan kredibilitas personal brand.",
       "Mempermudah klien atau perekrut melihat kemampuan Anda.",
       "Memberikan kesan profesional dengan tampilan rapi.",
-      "Mempercepat lead langsung melalui WhatsApp."
+      "Mempercepat calon klien menghubungi Anda."
     ],
     priceStartingFrom: "Mulai Rp 699.000",
     deliveryTime: "3-5 Hari Kerja",
@@ -115,20 +115,20 @@ export const services: Service[] = [
     id: "online-store-sederhana",
     title: "Online Store Sederhana",
     slug: "online-store-sederhana",
-    shortDescription: "Website toko online sederhana untuk menampilkan produk, detail produk, keranjang sederhana, dan checkout langsung via WhatsApp.",
-    fullDescription: "Online Store Sederhana cocok untuk UMKM dan usaha retail yang ingin menjual produk secara online dengan tampilan bersih, katalog interaktif, halaman produk detail, serta proses checkout yang mudah lewat WhatsApp.",
+    shortDescription: "Website toko online sederhana untuk menampilkan produk, detail produk, keranjang sederhana, dan checkout langsung melalui website.",
+    fullDescription: "Online Store Sederhana cocok untuk UMKM dan usaha retail yang ingin menjual produk secara online dengan tampilan bersih, katalog interaktif, halaman produk detail, serta proses checkout yang mudah melalui website dengan opsi pembayaran otomatis atau manual.",
     features: [
       "Katalog produk responsif",
       "Detail produk lengkap",
       "Keranjang sederhana",
-      "Checkout via WhatsApp",
+      "Checkout langsung melalui website dengan pilihan pembayaran otomatis atau manual.",
       "Filter dan kategori produk",
       "Menu populer dan promo"
     ],
     benefits: [
       "Mempercepat pelanggan menemukan produk Anda.",
-      "Menjaga proses penjualan simpel tanpa payment gateway.",
-      "Meningkatkan peluang closing lewat chat langsung.",
+      "Menjaga proses penjualan tetap simpel dan mudah dipahami.",
+      "Meningkatkan peluang closing dengan alur pemesanan yang jelas.",
       "Membuat toko online tampil lebih profesional."
     ],
     priceStartingFrom: "Mulai Rp 1.999.000",
@@ -140,7 +140,7 @@ export const services: Service[] = [
     title: "Redesign Website",
     slug: "redesign-website",
     shortDescription: "Layanan perbaikan tampilan website lama agar terlihat lebih modern, rapi, responsif, dan mudah dipahami pelanggan.",
-    fullDescription: "Redesign Website adalah layanan penyegaran tampilan untuk website lama Anda sehingga lebih modern, mudah dinavigasi, dan lebih efektif mengarahkan pengunjung pada CTA penting seperti WhatsApp atau formulir kontak.",
+    fullDescription: "Redesign Website adalah layanan penyegaran tampilan untuk website lama Anda sehingga lebih modern, mudah dinavigasi, dan lebih efektif mengarahkan pengunjung pada CTA penting seperti checkout, konsultasi, atau formulir kontak.",
     features: [
       "Perbaikan tampilan visual",
       "Optimasi layout mobile",

@@ -4,7 +4,7 @@ import { getWhatsAppLink } from "@/utils/whatsapp";
 
 export const metadata = {
   title: "Demo Online Store Sederhana | Digital Carroll Base",
-  description: "Demo online store UrbanStep Store dengan katalog produk, preview, cart summary, dan checkout WhatsApp.",
+  description: "Demo online store UrbanStep Store dengan katalog produk, preview, cart summary, dan checkout website.",
 };
 
 export default function DemoOnlineStoreSederhana() {
@@ -58,8 +58,8 @@ export default function DemoOnlineStoreSederhana() {
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-purple-700">UrbanStep Store</span>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">Toko online sederhana yang menampilkan produk, kategori, dan checkout WhatsApp.</h1>
-            <p className="max-w-2xl text-slate-600 text-base sm:text-lg leading-relaxed">Desain toko yang bersih dan responsif untuk produk footwear, pakaian, dan aksesori urban dengan tombol order langsung ke WhatsApp.</p>
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">Toko online sederhana yang menampilkan produk, kategori, dan checkout website.</h1>
+            <p className="max-w-2xl text-slate-600 text-base sm:text-lg leading-relaxed">Desain toko yang bersih dan responsif untuk produk footwear, pakaian, dan aksesori urban dengan alur order yang jelas.</p>
             <div className="flex flex-wrap gap-4">
               <a
                 href={getWhatsAppLink("Halo Digital Carroll Base, saya ingin memesan website online store untuk UrbanStep Store.")}
@@ -83,7 +83,7 @@ export default function DemoOnlineStoreSederhana() {
                   <p className="text-xs uppercase tracking-[0.2em] text-purple-200">Harga</p>
                   <p className="text-2xl font-black">Rp299.000</p>
                 </div>
-                <button className="rounded-full bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400">Beli via WhatsApp</button>
+                <button className="rounded-full bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400">Tambah Pesanan</button>
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@ export default function DemoOnlineStoreSederhana() {
                 rel="noopener noreferrer"
                 className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-400"
               >
-                Checkout via WhatsApp
+                Checkout Website
               </a>
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function DemoOnlineStoreSederhana() {
             {[
               { label: "Banner Promo", detail: "Diskon 20% untuk pembelian pertama." },
               { label: "Pengiriman", detail: "Pilihan antar lokal cepat dalam 1-2 hari." },
-              { label: "Support WA", detail: "Pesan dan konsultasi tanpa checkout rumit." }
+              { label: "Support", detail: "Konsultasi dan konfirmasi pesanan tetap mudah." }
             ].map((item) => (
               <div key={item.label} className="rounded-3xl bg-white/10 p-6">
                 <p className="text-xs uppercase tracking-[0.2em] text-purple-200">{item.label}</p>

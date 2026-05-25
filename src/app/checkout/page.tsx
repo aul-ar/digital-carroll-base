@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { CheckoutForm } from "@/components/CheckoutForm";
+import { CheckoutClient } from "@/components/CheckoutClient";
 
 export const metadata = {
   title: "Checkout Website | Digital Carroll Base",
@@ -18,8 +18,14 @@ export default function CheckoutPage() {
           Isi data pemesan dan ringkasan kebutuhan website. Metode pembayaran akan ditambahkan pada tahap berikutnya.
         </p>
       </section>
-      <Suspense fallback={<div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">Memuat checkout...</div>}>
-        <CheckoutForm />
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            Menyiapkan form checkout...
+          </div>
+        }
+      >
+        <CheckoutClient />
       </Suspense>
     </div>
   );

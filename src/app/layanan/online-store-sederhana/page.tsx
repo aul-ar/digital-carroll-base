@@ -8,7 +8,7 @@ import { Check, ArrowLeft, Eye, Clock, Tag, ShoppingCart, ShoppingBag, DollarSig
 
 export const metadata = {
   title: "Online Store Sederhana | Digital Carroll Base",
-  description: "Bangun toko online sederhana dengan katalog produk, detail item, keranjang, dan checkout WhatsApp tanpa payment gateway.",
+  description: "Bangun toko online sederhana dengan katalog produk, detail item, keranjang, dan checkout langsung melalui website.",
 };
 
 export default function OnlineStoreSederhanaService() {
@@ -24,8 +24,8 @@ export default function OnlineStoreSederhanaService() {
     },
     {
       icon: DollarSign,
-      title: "Checkout WhatsApp Mudah",
-      description: "Pelanggan bisa langsung order via WhatsApp dari keranjang dengan ringkasan pesanan otomatis."
+      title: "Checkout Website Mudah",
+      description: "Pelanggan dapat melanjutkan pesanan dari keranjang dengan ringkasan transaksi yang jelas."
     },
     {
       icon: ShoppingCart,
@@ -98,11 +98,11 @@ export default function OnlineStoreSederhanaService() {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Keranjang sederhana sebelum checkout WA</span>
+                <span>Keranjang sederhana sebelum checkout website</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Checkout pesan langsung ke WhatsApp</span>
+                <span>Checkout langsung melalui website</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -163,7 +163,7 @@ export default function OnlineStoreSederhanaService() {
       <section className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-3xl p-8 sm:p-12 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="space-y-2 max-w-xl text-center sm:text-left">
           <h2 className="text-2xl sm:text-3xl font-bold">Jual Produk Anda Lebih Cepat</h2>
-          <p className="text-emerald-100 text-xs sm:text-sm">Bangun toko online sederhana yang memudahkan pelanggan memilih dan memesan lewat WhatsApp.</p>
+          <p className="text-emerald-100 text-xs sm:text-sm">Bangun toko online sederhana yang memudahkan pelanggan memilih produk dan melanjutkan pemesanan melalui website.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Link

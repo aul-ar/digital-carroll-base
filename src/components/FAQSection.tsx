@@ -14,8 +14,24 @@ export const FAQSection: React.FC = () => {
 
   const faqs: FAQItem[] = [
     {
+      question: "Bagaimana cara memesan layanan di Digital Carroll Base?",
+      answer: "Anda dapat memilih paket, mengisi form checkout, memilih metode pembayaran, lalu menyimpan invoice sebagai bukti pemesanan."
+    },
+    {
+      question: "Metode pembayaran apa saja yang tersedia?",
+      answer: "Website mendukung pilihan pembayaran otomatis melalui Virtual Account, QRIS All Payment, dan E-Wallet melalui integrasi Duitku Sandbox. Pembayaran manual melalui transfer bank dan e-wallet juga tersedia sebagai alternatif."
+    },
+    {
+      question: "Apakah saya tetap bisa konsultasi lewat WhatsApp?",
+      answer: "Bisa. WhatsApp digunakan untuk konsultasi, briefing, dan konfirmasi pembayaran manual, tetapi proses pemesanan utama dapat dilakukan melalui checkout website."
+    },
+    {
+      question: "Apakah invoice tersedia setelah pembayaran?",
+      answer: "Ya. Sistem membuat invoice otomatis berisi nomor invoice, data pemesan, detail layanan, metode pembayaran, dan status transaksi."
+    },
+    {
       question: "Apa saja data/materi yang perlu disiapkan sebelum mulai?",
-      answer: "Anda hanya perlu menyiapkan data bisnis dasar seperti nama brand, deskripsi produk/jasa, logo (jika ada), foto pendukung, dan nomor WhatsApp yang aktif untuk menerima pesanan. Urusan copywriting, susunan tata letak, dan teknis coding semuanya kami bantu tangani."
+      answer: "Anda hanya perlu menyiapkan data bisnis dasar seperti nama brand, deskripsi produk/jasa, logo (jika ada), foto pendukung, dan nomor WhatsApp yang aktif untuk komunikasi project. Urusan copywriting, susunan tata letak, dan teknis coding semuanya kami bantu tangani."
     },
     {
       question: "Berapa lama proses pembuatan website hingga online?",
@@ -32,10 +48,6 @@ export const FAQSection: React.FC = () => {
     {
       question: "Bagaimana jika ada kesalahan atau revisi setelah website online?",
       answer: "Setelah website online, kami membantu pengecekan awal jika ada kendala teknis dari proses pengerjaan. Panduan penggunaan dasar juga dapat diberikan agar Anda lebih mudah memahami website."
-    },
-    {
-      question: "Bagaimana alur pembayaran dan pemesanan?",
-      answer: "Alurnya sangat praktis: 1) Konsultasi konsep dan kebutuhan via WhatsApp, 2) Pembayaran uang muka (DP) sebesar 50% untuk mulai pengerjaan, 3) Proses pengerjaan & penyerahan link demo untuk direview, 4) Proses revisi jika dibutuhkan, 5) Pelunasan sisa 50%, dan 6) Website resmi diluncurkan secara live."
     }
   ];
 

@@ -20,27 +20,32 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Reveal } from "@/components/Reveal";
 
 export default function HomePage() {
-  // Steps for the work process
+  // Steps for the customer ordering flow
   const processSteps = [
     {
       step: "01",
-      title: "Konsultasi Kebutuhan",
-      description: "Kami mulai dengan memahami jenis bisnis, tujuan website, target pelanggan, referensi desain, dan fitur yang dibutuhkan."
+      title: "Pilih Paket",
+      description: "Pilih paket website yang sesuai dengan kebutuhan bisnis Anda."
     },
     {
       step: "02",
-      title: "Perencanaan Konten & Desain",
-      description: "Struktur halaman, alur informasi, tampilan visual, dan copywriting disusun agar website terlihat profesional dan mudah dipahami pengunjung."
+      title: "Isi Checkout",
+      description: "Lengkapi data pemesan, informasi brand, dan kebutuhan website."
     },
     {
       step: "03",
-      title: "Development & Revisi",
-      description: "Website dikembangkan menggunakan teknologi modern, lalu Anda dapat meninjau hasilnya dan mengajukan revisi sesuai ketentuan paket."
+      title: "Pilih Pembayaran",
+      description: "Gunakan Virtual Account, QRIS All Payment, E-Wallet, atau metode manual yang tersedia."
     },
     {
       step: "04",
-      title: "Publikasi & Panduan Dasar",
-      description: "Setelah final, kami membantu proses publikasi website hingga siap diakses secara online. Kami juga memberikan panduan dasar agar Anda memahami cara menggunakan website."
+      title: "Terima Invoice",
+      description: "Invoice dibuat otomatis sebagai bukti pemesanan dan ringkasan transaksi."
+    },
+    {
+      step: "05",
+      title: "Briefing Project",
+      description: "Tim Digital Carroll Base akan menghubungi Anda untuk proses briefing dan pengerjaan."
     }
   ];
 
@@ -70,7 +75,9 @@ export default function HomePage() {
     "Desain website responsif",
     "Struktur halaman sesuai kebutuhan paket",
     "Penyusunan konten dasar",
-    "Tombol WhatsApp atau kontak utama",
+    "Checkout website dengan pilihan pembayaran otomatis atau manual",
+    "Invoice otomatis sebagai bukti pemesanan",
+    "Kontak WhatsApp untuk konsultasi dan konfirmasi manual",
     "Form kontak sederhana jika diperlukan",
     "Bantuan publikasi website",
     "Panduan penggunaan dasar"
@@ -82,7 +89,7 @@ export default function HomePage() {
     "Aset premium seperti font, gambar, icon, atau template berbayar",
     "Biaya layanan pihak ketiga",
     "Fitur custom kompleks di luar cakupan paket",
-    "Integrasi payment gateway atau API khusus jika membutuhkan setup tambahan",
+    "Integrasi khusus di luar metode pembayaran yang tersedia",
     "Pengelolaan iklan, SEO lanjutan, atau maintenance rutin bulanan"
   ];
 
@@ -264,25 +271,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Work Process Section */}
+      {/* 5. Order Process Section */}
       <section className="bg-slate-900 text-white py-20 rounded-3xl max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden relative">
         {/* Glow decoration */}
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <Reveal className="text-center max-w-2xl mx-auto mb-16 space-y-3 relative z-10">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-450 text-blue-400">
-            Alur Kerja Kami
+            Alur Pemesanan
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white">
-            4 Langkah Mudah Memiliki Website
+            5 Langkah Pemesanan Website
           </h2>
           <p className="text-slate-400 text-sm sm:text-base">
-            Alur kerja sederhana dan terstruktur agar kebutuhan website Anda dipahami dengan jelas, dikerjakan secara rapi, dan siap dipublikasikan.
+            Pemesanan dapat dimulai langsung dari website, lengkap dengan ringkasan paket, pilihan pembayaran, invoice, dan tindak lanjut briefing project.
           </p>
         </Reveal>
 
         {/* Steps Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative z-10">
           {processSteps.map((step, i) => (
             <Reveal key={i} delay={Math.min(i * 90, 360)} className="relative space-y-4 group">
               {/* Step indicator */}
@@ -293,7 +300,7 @@ export default function HomePage() {
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">{step.description}</p>
               
               {/* Connecting line for desktop */}
-              {i < 3 && (
+              {i < processSteps.length - 1 && (
                 <div className="hidden md:block absolute top-6 left-1/2 w-full h-[1px] bg-slate-800 -z-10" />
               )}
             </Reveal>

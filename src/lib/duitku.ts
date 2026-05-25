@@ -23,15 +23,16 @@ export function getDuitkuConfig() {
     apiKey: process.env.DUITKU_API_KEY ?? "",
     sandboxBaseUrl: sandboxBaseUrl.replace(/\/$/, ""),
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://carrollbase.com",
+    mockEnabled: process.env.NEXT_PUBLIC_ENABLE_DUITKU_MOCK === "true",
   };
 }
 
 export function mapPaymentMethodToDuitkuCode(paymentMethod: PaymentMethod) {
   // Sesuaikan paymentMethod code dengan channel yang aktif di dashboard Duitku Sandbox.
   const paymentMethodCodes: Partial<Record<PaymentMethod, string>> = {
-    virtual_account: "VC", // TODO: pilih kode channel VA yang aktif di Merchant Portal.
-    qris: "SP", // TODO: sesuaikan dengan channel QRIS Duitku yang aktif.
-    ewallet: "OV", // TODO: sesuaikan dengan channel e-wallet Duitku yang aktif.
+    virtual_account: process.env.DUITKU_VA_PAYMENT_CODE || "VC",
+    qris: process.env.DUITKU_QRIS_PAYMENT_CODE || "SP",
+    ewallet: process.env.DUITKU_EWALLET_PAYMENT_CODE || "OV",
   };
 
   return paymentMethodCodes[paymentMethod] ?? null;
@@ -120,6 +121,7 @@ export function validateDuitkuRequestPayload(payload: Partial<DuitkuTransactionP
   if (missingFields.length > 0) {
     return {
       valid: false,
+      code: "VALIDATION_ERROR",
       message: `Field wajib belum lengkap: ${missingFields.join(", ")}.`,
     };
   }
@@ -127,6 +129,7 @@ export function validateDuitkuRequestPayload(payload: Partial<DuitkuTransactionP
   if (typeof payload.amount !== "number" || !Number.isFinite(payload.amount) || payload.amount <= 0) {
     return {
       valid: false,
+      code: "VALIDATION_ERROR",
       message: "Amount harus berupa number dan lebih besar dari 0.",
     };
   }
@@ -138,12 +141,14 @@ export function validateDuitkuRequestPayload(payload: Partial<DuitkuTransactionP
   ) {
     return {
       valid: false,
+      code: "INVALID_PAYMENT_METHOD",
       message: "Metode pembayaran tidak dapat diproses melalui Duitku Sandbox.",
     };
   }
 
   return {
     valid: true,
+    code: "OK",
     message: "Payload valid.",
   };
 }
