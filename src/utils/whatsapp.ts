@@ -7,7 +7,6 @@ Referensi website:
 Budget estimasi:`;
 
 export function getWhatsAppLink(message?: string): string {
-  void message;
   const baseNumber = "6285179690688";
-  return `https://wa.me/${baseNumber}?text=${encodeURIComponent(DEFAULT_WHATSAPP_MESSAGE)}`;
+  return `https://wa.me/${baseNumber}?text=${encodeURIComponent(message ?? DEFAULT_WHATSAPP_MESSAGE)}`;
 }

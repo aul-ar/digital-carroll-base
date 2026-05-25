@@ -4,30 +4,56 @@ import React, { useState } from "react";
 import { Phone, Mail, Clock, MapPin, Send, HelpCircle } from "lucide-react";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
-export default function KontakPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [interest, setInterest] = useState("Landing Page Bisnis");
-  const [message, setMessage] = useState("");
+const WEB3FORMS_ACCESS_KEY = "ba85473f-326e-4010-a39c-3c98ac1deb37";
+const CONTACT_EMAIL = "hi@auliaabdulrahman.site";
 
-  const handleSubmit = (e: React.FormEvent) => {
+export default function KontakPage() {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [formStatus, setFormStatus] = useState<"idle" | "success" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!name || !phone || !message) {
-      alert("Harap lengkapi Nama, Nomor HP/WA, dan Detail Pesan Anda.");
+    setFormStatus("idle");
+
+    if (!email || !message) {
+      setFormStatus("error");
       return;
     }
-    
-    // Construct WA message
-    const waText = `Halo Digital Carroll Base, saya *${name}* (${email || '-'}).
-No. Kontak: *${phone}*
-Saya tertarik pada layanan: *${interest}*
 
-*Pesan/Pertanyaan:*
-${message}`;
+    setIsSending(true);
 
-    const waUrl = getWhatsAppLink(waText);
-    window.open(waUrl, "_blank");
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          email,
+          message,
+          subject: "New Portfolio Contact Message",
+          from_name: "Aulia Portfolio Website",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error("Failed to submit contact form");
+      }
+
+      setEmail("");
+      setMessage("");
+      setFormStatus("success");
+    } catch {
+      setFormStatus("error");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const contactInfos = [
@@ -41,9 +67,9 @@ ${message}`;
     {
       icon: Mail,
       title: "Email Resmi",
-      value: "digital@carrollbase.com",
+      value: CONTACT_EMAIL,
       description: "Untuk proposal kerjasama B2B & penawaran formal.",
-      link: "mailto:digital@carrollbase.com"
+      link: `mailto:${CONTACT_EMAIL}`
     },
     {
       icon: Clock,
@@ -126,69 +152,26 @@ ${message}`;
             <div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Formulir Pertanyaan</h2>
               <p className="text-slate-550 dark:text-slate-450 text-xs sm:text-sm mt-1">
-                Data formulir di bawah ini dikirimkan langsung ke admin WhatsApp kami.
+                Data formulir di bawah ini dikirimkan langsung ke email kontak kami.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="full-name" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Lengkap</label>
-                  <input
-                    id="full-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="cth. Alexander Carroll"
-                    required
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="email-addr" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email (Opsional)</label>
-                  <input
-                    id="email-addr"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="cth. alex@carroll.com"
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="phone-num" className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. HP / WhatsApp</label>
-                  <input
-                    id="phone-num"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="cth. 08123456789"
-                    required
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="topic-select" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Layanan yang Diminati</label>
-                  <select
-                    id="topic-select"
-                    value={interest}
-                    onChange={(e) => setInterest(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950 cursor-pointer"
-                  >
-                    <option value="Landing Page Bisnis">Landing Page Bisnis - Rp 799k</option>
-                    <option value="Company Profile Website">Company Profile Website - Rp 1.499k</option>
-                    <option value="Katalog Produk Online">Katalog Produk Online - Rp 1.999k</option>
-                    <option value="Website Kustom">Website Kustom Lainnya</option>
-                    <option value="Tanya Pertanyaan Umum">Tanya Pertanyaan Umum</option>
-                  </select>
-                </div>
+              <div className="space-y-1.5">
+                <label htmlFor="email-addr" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                <input
+                  id="email-addr"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="cth. alex@carroll.com"
+                  required
+                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-blue-600 bg-slate-50 dark:bg-slate-950"
+                />
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="question-text" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Detail Pesan / Pertanyaan</label>
+                <label htmlFor="question-text" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Message</label>
                 <textarea
                   id="question-text"
                   value={message}
@@ -200,12 +183,24 @@ ${message}`;
                 />
               </div>
 
+              {formStatus === "success" && (
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                  Pesan berhasil dikirim. Terima kasih, kami akan menghubungi Anda kembali.
+                </p>
+              )}
+              {formStatus === "error" && (
+                <p className="text-sm font-medium text-red-500 dark:text-red-400">
+                  Pesan belum berhasil dikirim. Pastikan email dan pesan sudah terisi, lalu coba lagi.
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-3.5 rounded-xl shadow-md transition-colors cursor-pointer"
+                disabled={isSending}
+                className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-sm py-3.5 rounded-xl shadow-md transition-colors cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Kirim Pertanyaan via WhatsApp</span>
+                <span>{isSending ? "Mengirim..." : "Kirim Pesan"}</span>
               </button>
             </form>
           </div>

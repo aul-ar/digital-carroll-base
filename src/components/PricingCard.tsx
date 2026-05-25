@@ -1,5 +1,6 @@
 import React from "react";
-import { Check, X, Clock, HelpCircle } from "lucide-react";
+import Link from "next/link";
+import { Check, X, Clock } from "lucide-react";
 import { PricingPlan } from "@/data/pricing";
 import { WhatsAppButton } from "./WhatsAppButton";
 
@@ -81,11 +82,21 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
       </div>
 
       {/* Button Action */}
-      <div>
+      <div className="space-y-3">
+        <Link
+          href={`/checkout?plan=${plan.id}`}
+          className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-bold shadow-md transition-all duration-300 ${
+            plan.popular
+              ? "bg-white text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 dark:bg-slate-50 dark:text-blue-700"
+              : "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-indigo-500/20 hover:from-blue-500 hover:to-purple-500"
+          }`}
+        >
+          Checkout Paket Ini
+        </Link>
         <WhatsAppButton
-          variant={plan.popular ? "secondary" : "primary"}
+          variant="outline"
           className="w-full"
-          text="Pesan Paket Ini"
+          text="Tanya Dulu via WhatsApp"
           message={`Halo Digital Carroll Base, saya tertarik dengan layanan "${plan.name}" (${plan.price}). Bagaimana kelanjutannya?`}
         />
       </div>
