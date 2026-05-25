@@ -1,21 +1,35 @@
-import { createInvoicePayload, CustomerData, PaymentMethod } from "@/lib/invoice";
+import { createInvoiceData, PaymentMethod } from "@/lib/invoice";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      customer?: CustomerData;
+      customer?: {
+        fullName: string;
+        email: string;
+        whatsapp: string;
+        businessName: string;
+      };
       paymentMethod?: PaymentMethod;
-      planId?: string;
+      packageName?: string;
+      packageDescription?: string;
+      packagePrice?: string | number;
+      notes?: string;
     };
 
-    if (!body.customer || !body.paymentMethod || !body.planId) {
+    if (!body.customer || !body.paymentMethod || !body.packageName || !body.packageDescription) {
       return Response.json({ message: "Data invoice tidak lengkap." }, { status: 400 });
     }
 
-    const invoice = createInvoicePayload({
-      customer: body.customer,
+    const invoice = createInvoiceData({
       paymentMethod: body.paymentMethod,
-      planId: body.planId,
+      customerName: body.customer.fullName,
+      customerEmail: body.customer.email,
+      customerWhatsapp: body.customer.whatsapp,
+      businessName: body.customer.businessName,
+      packageName: body.packageName,
+      packageDescription: body.packageDescription,
+      packagePrice: body.packagePrice ?? 0,
+      notes: body.notes ?? "",
     });
 
     return Response.json({ invoice });

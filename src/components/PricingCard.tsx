@@ -2,13 +2,15 @@ import React from "react";
 import Link from "next/link";
 import { Check, X, Clock } from "lucide-react";
 import { PricingPlan } from "@/data/pricing";
-import { WhatsAppButton } from "./WhatsAppButton";
+import { getPackageIdFromPricingPlan } from "@/lib/checkout-packages";
 
 interface PricingCardProps {
   plan: PricingPlan;
 }
 
 export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
+  const packageId = getPackageIdFromPricingPlan(plan.id, plan.targetServiceSlug);
+
   return (
     <div
       className={`relative bg-white dark:bg-slate-900 border rounded-3xl p-8 hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full ${
@@ -82,9 +84,9 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
       </div>
 
       {/* Button Action */}
-      <div className="space-y-3">
+      <div>
         <Link
-          href={`/checkout?plan=${plan.id}`}
+          href={`/checkout?package=${packageId}`}
           className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-bold shadow-md transition-all duration-300 ${
             plan.popular
               ? "bg-white text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 dark:bg-slate-50 dark:text-blue-700"
@@ -93,12 +95,6 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
         >
           Checkout Paket Ini
         </Link>
-        <WhatsAppButton
-          variant="outline"
-          className="w-full"
-          text="Tanya Dulu via WhatsApp"
-          message={`Halo Digital Carroll Base, saya tertarik dengan layanan "${plan.name}" (${plan.price}). Bagaimana kelanjutannya?`}
-        />
       </div>
     </div>
   );

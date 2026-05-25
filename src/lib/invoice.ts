@@ -1,5 +1,3 @@
-import { pricingPlans } from "@/data/pricing";
-
 export type InvoiceStatus = "pending" | "paid" | "failed" | "expired";
 
 export type PaymentMethod =
@@ -9,37 +7,32 @@ export type PaymentMethod =
   | "bank_transfer_manual"
   | "ewallet_manual";
 
-export interface CustomerData {
-  fullName: string;
-  email: string;
-  whatsapp: string;
+export interface InvoiceData {
+  invoiceId: string;
+  orderId: string;
+  createdAt: string;
+  paidAt?: string;
+  paymentStatus: InvoiceStatus;
+  paymentMethod: PaymentMethod;
+  customerName: string;
+  customerEmail: string;
+  customerWhatsapp: string;
   businessName: string;
-}
-
-export interface InvoiceItem {
-  serviceName: string;
-  description: string;
+  packageName: string;
+  packageDescription: string;
   quantity: number;
   price: number;
   subtotal: number;
+  total: number;
+  notes: string;
 }
 
-export interface Invoice {
-  orderId: string;
-  invoiceId: string;
-  createdAt: string;
-  status: InvoiceStatus;
-  customer: CustomerData;
-  item: InvoiceItem;
-  paymentMethod: PaymentMethod;
-  total: number;
-  duitkuReference?: string;
-  paymentUrl?: string;
-}
+export type Invoice = InvoiceData;
 
 export const manualPaymentDetails = {
   bank: {
     label: "Transfer Bank BCA",
+    bankName: "BCA",
     accountNumber: "6580812382",
     accountName: "Aulia Abdul Rahman",
   },
@@ -52,21 +45,46 @@ export const manualPaymentDetails = {
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
   virtual_account: "Virtual Account via Duitku Sandbox",
-  qris: "QRIS via Duitku Sandbox",
+  qris: "QRIS All Payment via Duitku Sandbox",
   ewallet: "E-Wallet via Duitku Sandbox",
   bank_transfer_manual: "Transfer Bank BCA Manual",
   ewallet_manual: "E-Wallet Manual",
 };
 
 export const statusLabels: Record<InvoiceStatus, string> = {
-  pending: "Pending",
-  paid: "Paid",
-  failed: "Failed",
-  expired: "Expired",
+  pending: "Menunggu Pembayaran",
+  paid: "Sudah Dibayar",
+  failed: "Pembayaran Gagal",
+  expired: "Kadaluarsa",
 };
 
-export function isManualPayment(method: PaymentMethod) {
-  return method === "bank_transfer_manual" || method === "ewallet_manual";
+function getDatePart(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("");
+}
+
+function getSequence() {
+  return String(Math.floor(Math.random() * 900) + 100).padStart(3, "0");
+}
+
+export function generateOrderId(sequence = getSequence()) {
+  return `DCB-${getDatePart()}-${sequence}`;
+}
+
+export function generateInvoiceId(sequence = getSequence()) {
+  return `INV-DCB-${getDatePart()}-${sequence}`;
+}
+
+export function generateOrderInvoiceIds() {
+  const sequence = getSequence();
+
+  return {
+    orderId: generateOrderId(sequence),
+    invoiceId: generateInvoiceId(sequence),
+  };
 }
 
 export function formatCurrency(value: number) {
@@ -77,19 +95,20 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function formatInvoiceDate(value: string) {
+export function formatDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
 
-export function getPlanById(planId: string) {
-  return pricingPlans.find((plan) => plan.id === planId) ?? pricingPlans[0];
+export function formatInvoiceDate(value: string) {
+  return formatDate(value);
 }
 
-export function getPlanAmount(price: string) {
+export function parsePackagePrice(price: string) {
   const match = price.match(/Rp\s*([\d.]+)/i);
+
   if (!match) {
     return 0;
   }
@@ -97,63 +116,56 @@ export function getPlanAmount(price: string) {
   return Number(match[1].replace(/\./g, ""));
 }
 
-export function getPlanCheckoutDescription(planId: string) {
-  const plan = getPlanById(planId);
-  return `${plan.description} Estimasi pengerjaan ${plan.deliveryTime}.`;
+export function isManualPayment(method: PaymentMethod) {
+  return method === "bank_transfer_manual" || method === "ewallet_manual";
 }
 
-export function generateOrderPair(sequence?: number) {
-  const now = new Date();
-  const datePart = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("");
-  const suffix = String(sequence ?? Math.floor(Math.random() * 900) + 100).padStart(3, "0");
-
-  return {
-    orderId: `DCB-${datePart}-${suffix}`,
-    invoiceId: `INV-DCB-${datePart}-${suffix}`,
-  };
-}
-
-export function createInvoicePayload(input: {
-  customer: CustomerData;
+export function createInvoiceData(input: {
   paymentMethod: PaymentMethod;
-  planId: string;
-  sequence?: number;
-}): Invoice {
-  const plan = getPlanById(input.planId);
-  const amount = getPlanAmount(plan.price);
-  const { orderId, invoiceId } = generateOrderPair(input.sequence);
+  customerName: string;
+  customerEmail: string;
+  customerWhatsapp: string;
+  businessName: string;
+  packageName: string;
+  packageDescription: string;
+  packagePrice: string | number;
+  notes: string;
+}) {
+  const { orderId, invoiceId } = generateOrderInvoiceIds();
+  const price =
+    typeof input.packagePrice === "number"
+      ? input.packagePrice
+      : parsePackagePrice(input.packagePrice);
 
   return {
-    orderId,
     invoiceId,
+    orderId,
     createdAt: new Date().toISOString(),
-    status: "pending",
-    customer: input.customer,
+    paymentStatus: "pending" as const,
     paymentMethod: input.paymentMethod,
-    total: amount,
-    item: {
-      serviceName: plan.name,
-      description: getPlanCheckoutDescription(plan.id),
-      quantity: 1,
-      price: amount,
-      subtotal: amount,
-    },
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    customerWhatsapp: input.customerWhatsapp,
+    businessName: input.businessName,
+    packageName: input.packageName,
+    packageDescription: input.packageDescription,
+    quantity: 1,
+    price,
+    subtotal: price,
+    total: price,
+    notes: input.notes,
   };
 }
 
-export function buildWhatsAppInvoiceMessage(invoice: Invoice) {
+export function buildWhatsAppInvoiceMessage(invoice: InvoiceData) {
   return [
     "Halo Digital Carroll Base, saya ingin konfirmasi pembayaran/pemesanan.",
     "",
     `Invoice: ${invoice.invoiceId}`,
     `Order ID: ${invoice.orderId}`,
-    `Nama: ${invoice.customer.fullName}`,
-    `Bisnis/Brand: ${invoice.customer.businessName}`,
-    `Layanan: ${invoice.item.serviceName}`,
+    `Nama: ${invoice.customerName}`,
+    `Bisnis/Brand: ${invoice.businessName}`,
+    `Layanan: ${invoice.packageName}`,
     `Total: ${formatCurrency(invoice.total)}`,
     `Metode: ${paymentMethodLabels[invoice.paymentMethod]}`,
   ].join("\n");

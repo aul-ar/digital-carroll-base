@@ -3,27 +3,27 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { InvoiceStatus } from "@/lib/invoice";
-import { getLatestInvoiceId, updateStoredInvoiceStatus } from "@/lib/invoice-storage";
+import { getLatestInvoiceId } from "@/lib/invoice-storage";
 
 const content = {
   paid: {
     icon: CheckCircle2,
     title: "Pembayaran Berhasil",
-    description: "Terima kasih. Invoice sudah ditandai paid dan tim Digital Carroll Base akan menghubungi Anda.",
+    description: "Terima kasih. Pembayaran Anda berhasil diproses.",
     className: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/25 dark:text-emerald-300",
   },
   pending: {
     icon: Clock3,
-    title: "Pembayaran Pending",
-    description: "Invoice masih pending. Selesaikan pembayaran atau konfirmasi manual jika menggunakan metode alternatif.",
+    title: "Pembayaran Menunggu",
+    description: "Invoice telah dibuat dan menunggu pembayaran.",
     className: "text-amber-600 bg-amber-50 dark:bg-amber-950/25 dark:text-amber-300",
   },
   failed: {
     icon: XCircle,
     title: "Pembayaran Gagal",
-    description: "Transaksi belum berhasil. Anda dapat melihat invoice atau membuat checkout ulang.",
+    description: "Pembayaran belum berhasil. Silakan coba kembali atau hubungi admin.",
     className: "text-red-600 bg-red-50 dark:bg-red-950/25 dark:text-red-300",
   },
 };
@@ -35,12 +35,6 @@ export function PaymentResult({ status }: { status: InvoiceStatus }) {
   const invoiceId = queryInvoiceId ?? latestInvoiceId;
   const view = useMemo(() => content[status === "expired" ? "failed" : status], [status]);
   const Icon = view.icon;
-
-  useEffect(() => {
-    if (invoiceId) {
-      updateStoredInvoiceStatus(invoiceId, status);
-    }
-  }, [invoiceId, status]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 pb-16">

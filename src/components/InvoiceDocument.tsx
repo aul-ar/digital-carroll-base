@@ -5,7 +5,7 @@ import { ArrowLeft, MessageCircle, Printer } from "lucide-react";
 import {
   buildWhatsAppInvoiceMessage,
   formatCurrency,
-  formatInvoiceDate,
+  formatDate,
   Invoice,
   isManualPayment,
   manualPaymentDetails,
@@ -24,6 +24,7 @@ const statusStyles = {
 export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
   const showManualDetails = isManualPayment(invoice.paymentMethod);
   const waLink = getWhatsAppLink(buildWhatsAppInvoiceMessage(invoice));
+  const status = invoice.paymentStatus;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-16">
@@ -36,7 +37,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           Kembali ke Beranda
         </Link>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {(invoice.status === "pending" || showManualDetails) && (
+          {invoice.paymentStatus === "pending" && (
             <a
               href={waLink}
               target="_blank"
@@ -64,16 +65,16 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Digital Carroll Base
             </p>
-            <h1 className="mt-1 text-2xl font-extrabold text-slate-950 dark:text-white">
-              Invoice Pembayaran
+              <h1 className="mt-1 text-2xl font-extrabold text-slate-950 dark:text-white">
+              INVOICE
             </h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Website Development & Digital Service
             </p>
           </div>
           <div className="space-y-2 text-left sm:text-right">
-            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${statusStyles[invoice.status]}`}>
-              {statusLabels[invoice.status]}
+            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${statusStyles[status]}`}>
+              {statusLabels[status]}
             </span>
             <div className="text-sm text-slate-600 dark:text-slate-300">
               <p className="font-semibold text-slate-900 dark:text-white">{invoice.invoiceId}</p>
@@ -82,23 +83,29 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           </div>
         </header>
 
-        <section className="grid gap-6 border-b border-slate-200 py-6 dark:border-slate-800 md:grid-cols-3">
+        <section className="grid gap-5 border-b border-slate-200 py-6 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Invoice No</p>
+            <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {invoice.invoiceId}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Order ID</p>
+            <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {invoice.orderId}
+            </p>
+          </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Tanggal Invoice</p>
             <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-              {formatInvoiceDate(invoice.createdAt)}
+              {formatDate(invoice.createdAt)}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Metode Pembayaran</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Status Pembayaran</p>
             <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-              {paymentMethodLabels[invoice.paymentMethod]}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Pembayaran</p>
-            <p className="mt-2 text-lg font-extrabold text-slate-950 dark:text-white">
-              {formatCurrency(invoice.total)}
+              {statusLabels[status]}
             </p>
           </div>
         </section>
@@ -109,19 +116,19 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="text-slate-500 dark:text-slate-400">Nama lengkap</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customer.fullName}</dd>
+                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customerName}</dd>
               </div>
               <div>
                 <dt className="text-slate-500 dark:text-slate-400">Email</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customer.email}</dd>
+                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customerEmail}</dd>
               </div>
               <div>
                 <dt className="text-slate-500 dark:text-slate-400">Nomor WhatsApp</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customer.whatsapp}</dd>
+                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customerWhatsapp}</dd>
               </div>
               <div>
                 <dt className="text-slate-500 dark:text-slate-400">Nama bisnis / brand</dt>
-                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.customer.businessName}</dd>
+                <dd className="font-semibold text-slate-800 dark:text-slate-100">{invoice.businessName}</dd>
               </div>
             </dl>
           </div>
@@ -132,7 +139,11 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               {invoice.paymentMethod === "bank_transfer_manual" ? (
                 <dl className="mt-4 space-y-3 text-sm text-amber-900 dark:text-amber-100">
                   <div>
-                    <dt className="font-medium opacity-75">{manualPaymentDetails.bank.label}</dt>
+                    <dt className="font-medium opacity-75">Bank</dt>
+                    <dd className="font-extrabold">{manualPaymentDetails.bank.bankName}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium opacity-75">Nomor Rekening</dt>
                     <dd className="font-extrabold">{manualPaymentDetails.bank.accountNumber}</dd>
                   </div>
                   <div>
@@ -161,6 +172,10 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
 
         <section className="py-6">
           <h2 className="text-sm font-bold text-slate-950 dark:text-white">Detail Pesanan</h2>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950">
+            <span className="text-slate-500 dark:text-slate-400">Metode Pembayaran: </span>
+            <span className="font-bold text-slate-900 dark:text-white">{paymentMethodLabels[invoice.paymentMethod]}</span>
+          </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
             <table className="w-full min-w-[620px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-800/70 dark:text-slate-400">
@@ -174,11 +189,11 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               </thead>
               <tbody>
                 <tr className="border-t border-slate-200 dark:border-slate-800">
-                  <td className="px-4 py-4 font-bold text-slate-900 dark:text-white">{invoice.item.serviceName}</td>
-                  <td className="px-4 py-4 text-slate-600 dark:text-slate-300">{invoice.item.description}</td>
-                  <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-200">{invoice.item.quantity}</td>
-                  <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-200">{formatCurrency(invoice.item.price)}</td>
-                  <td className="px-4 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(invoice.item.subtotal)}</td>
+                  <td className="px-4 py-4 font-bold text-slate-900 dark:text-white">{invoice.packageName}</td>
+                  <td className="px-4 py-4 text-slate-600 dark:text-slate-300">{invoice.packageDescription}</td>
+                  <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-200">{invoice.quantity}</td>
+                  <td className="px-4 py-4 text-right text-slate-700 dark:text-slate-200">{formatCurrency(invoice.price)}</td>
+                  <td className="px-4 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(invoice.subtotal)}</td>
                 </tr>
               </tbody>
             </table>

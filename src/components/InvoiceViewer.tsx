@@ -49,10 +49,10 @@ export function InvoiceViewer({ invoiceId }: { invoiceId: string }) {
             Untuk MVP tanpa database, invoice tersimpan di browser yang digunakan saat checkout.
           </p>
           <Link
-            href="/checkout"
+            href="/"
             className="mt-6 inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-500"
           >
-            Buat Invoice Baru
+            Kembali ke Beranda
           </Link>
         </div>
       </div>
