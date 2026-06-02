@@ -7,6 +7,8 @@ import {
   normalizePhoneNumber,
   validateDuitkuRequestPayload,
 } from "@/lib/duitku";
+import { prisma } from "@/lib/prisma";
+import { PaymentMethod } from "@prisma/client";
 
 type DuitkuErrorCode =
   | "MISSING_DUITKU_ENV"
@@ -25,6 +27,28 @@ interface DuitkuCreateInvoiceResponse {
   statusCode?: string;
   statusMessage?: string;
   Message?: string;
+}
+
+type DuitkuTransactionPayloadWithMeta = DuitkuTransactionPayload & {
+  businessName?: string;
+  notes?: string;
+};
+
+function mapPaymentMethodToPrisma(method: DuitkuTransactionPayload["paymentMethod"]): PaymentMethod {
+  switch (method) {
+    case "virtual_account":
+      return "VIRTUAL_ACCOUNT";
+    case "qris":
+      return "QRIS";
+    case "ewallet":
+      return "EWALLET";
+    case "bank_transfer_manual":
+      return "BANK_TRANSFER_MANUAL";
+    case "ewallet_manual":
+      return "EWALLET_MANUAL";
+    default:
+      throw new Error(`Unsupported payment method: ${method}`);
+  }
 }
 
 async function readDuitkuResponse(response: Response) {
@@ -53,24 +77,23 @@ function logDuitkuError(input: {
   paymentMethod?: string;
   duitkuPaymentMethodCode?: string | null;
 }) {
-  console.error("Duitku transaction error", {
-    code: input.code,
-    httpStatus: input.httpStatus,
-    statusMessage: input.statusMessage,
-    merchantOrderId: input.merchantOrderId,
-    paymentMethod: input.paymentMethod,
-    duitkuPaymentMethodCode: input.duitkuPaymentMethodCode,
-  });
+  console.error("Duitku transaction error", input);
 }
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Partial<DuitkuTransactionPayload>;
+    const body = (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
     const validation = validateDuitkuRequestPayload(body);
 
     if (!validation.valid) {
       const code = validation.code === "INVALID_PAYMENT_METHOD" ? "INVALID_PAYMENT_METHOD" : "VALIDATION_ERROR";
-      logDuitkuError({ code, statusMessage: validation.message, paymentMethod: body.paymentMethod });
+
+      logDuitkuError({
+        code,
+        statusMessage: validation.message,
+        paymentMethod: body.paymentMethod,
+      });
+
       return Response.json({ success: false, code, message: validation.message }, { status: 400 });
     }
 
@@ -78,6 +101,7 @@ export async function POST(request: Request) {
 
     if (!config.merchantCode || !config.apiKey) {
       logDuitkuError({ code: "MISSING_DUITKU_ENV" });
+
       return Response.json(
         {
           success: false,
@@ -88,9 +112,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = body as DuitkuTransactionPayload;
+    const payload = body as DuitkuTransactionPayloadWithMeta;
     const merchantOrderId = createMerchantOrderId(payload.orderId);
     const duitkuPaymentMethodCode = mapPaymentMethodToDuitkuCode(payload.paymentMethod);
+    const prismaPaymentMethod = mapPaymentMethodToPrisma(payload.paymentMethod);
 
     if (!duitkuPaymentMethodCode) {
       logDuitkuError({
@@ -99,6 +124,7 @@ export async function POST(request: Request) {
         paymentMethod: payload.paymentMethod,
         duitkuPaymentMethodCode,
       });
+
       return Response.json(
         {
           success: false,
@@ -108,6 +134,79 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const order = await prisma.order.upsert({
+      where: {
+        orderId: payload.orderId,
+      },
+      update: {
+        status: "WAITING_PAYMENT",
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        customerWhatsapp: payload.customerWhatsapp,
+        businessName: payload.businessName ?? null,
+        packageName: payload.packageName,
+        packageDescription: payload.packageDescription,
+        quantity: 1,
+        price: payload.amount,
+        subtotal: payload.amount,
+        total: payload.amount,
+        notes: payload.notes ?? null,
+      },
+      create: {
+        orderId: payload.orderId,
+        status: "WAITING_PAYMENT",
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        customerWhatsapp: payload.customerWhatsapp,
+        businessName: payload.businessName ?? null,
+        packageName: payload.packageName,
+        packageDescription: payload.packageDescription,
+        quantity: 1,
+        price: payload.amount,
+        subtotal: payload.amount,
+        total: payload.amount,
+        notes: payload.notes ?? null,
+      },
+    });
+
+    await prisma.invoice.upsert({
+      where: {
+        invoiceId: payload.invoiceId,
+      },
+      update: {
+        status: "PENDING",
+        paymentMethod: prismaPaymentMethod,
+        paidAt: null,
+      },
+      create: {
+        invoiceId: payload.invoiceId,
+        status: "PENDING",
+        paymentMethod: prismaPaymentMethod,
+        orderIdRef: order.id,
+      },
+    });
+
+    await prisma.payment.upsert({
+      where: {
+        orderIdRef: order.id,
+      },
+      update: {
+        status: "PENDING",
+        paymentMethod: prismaPaymentMethod,
+        provider: "duitku",
+        merchantOrderId,
+        amount: payload.amount,
+      },
+      create: {
+        status: "PENDING",
+        paymentMethod: prismaPaymentMethod,
+        provider: "duitku",
+        merchantOrderId,
+        amount: payload.amount,
+        orderIdRef: order.id,
+      },
+    });
 
     if (config.mockEnabled) {
       return Response.json({
@@ -129,6 +228,7 @@ export async function POST(request: Request) {
     const productDetails = `Digital Carroll Base - ${payload.packageName}`;
     const phoneNumber = normalizePhoneNumber(payload.customerWhatsapp);
     const timestamp = Date.now().toString();
+
     const signature = buildDuitkuCreateInvoiceSignature({
       merchantCode: config.merchantCode,
       timestamp,
@@ -178,6 +278,19 @@ export async function POST(request: Request) {
     const isSuccess = duitkuResponse.ok && duitkuData.statusCode === "00" && Boolean(duitkuData.paymentUrl);
 
     if (isSuccess) {
+      await prisma.payment.update({
+        where: {
+          orderIdRef: order.id,
+        },
+        data: {
+          providerReference: duitkuData.reference,
+          providerPaymentUrl: duitkuData.paymentUrl,
+          paymentCode: duitkuPaymentMethodCode,
+          vaNumber: duitkuData.vaNumber,
+          qrString: duitkuData.qrString,
+        },
+      });
+
       return Response.json({
         success: true,
         provider: "duitku",
@@ -195,6 +308,15 @@ export async function POST(request: Request) {
         },
       });
     }
+
+    await prisma.payment.update({
+      where: {
+        orderIdRef: order.id,
+      },
+      data: {
+        status: "FAILED",
+      },
+    });
 
     logDuitkuError({
       code: "DUITKU_REQUEST_FAILED",
@@ -220,11 +342,13 @@ export async function POST(request: Request) {
       code: "UNKNOWN_ERROR",
       statusMessage: reason instanceof Error ? reason.message : "Unknown error",
     });
+
     return Response.json(
       {
         success: false,
         code: "UNKNOWN_ERROR",
         message: "Gagal membuat transaksi Duitku.",
+        detail: reason instanceof Error ? reason.message : "Unknown error",
       },
       { status: 500 }
     );

@@ -7,12 +7,19 @@ export interface DuitkuTransactionPayload {
   customerName: string;
   customerEmail: string;
   customerWhatsapp: string;
+
+  businessName?: string;
+
   packageName: string;
   packageDescription: string;
+
   amount: number;
   paymentMethod: PaymentMethod;
+
   invoiceId: string;
   orderId: string;
+
+  notes?: string;
 }
 
 export function getDuitkuConfig() {
@@ -30,14 +37,22 @@ export function getDuitkuConfig() {
   };
 }
 
-export function mapPaymentMethodToDuitkuCode(paymentMethod: PaymentMethod) {
+export function mapPaymentMethodToDuitkuCode(
+  paymentMethod: PaymentMethod
+) {
   const paymentMethodCodes: Partial<Record<PaymentMethod, string>> = {
-    virtual_account: process.env.DUITKU_VA_PAYMENT_CODE || "BC",
-    qris: process.env.DUITKU_QRIS_PAYMENT_CODE || "",
-    ewallet: process.env.DUITKU_EWALLET_PAYMENT_CODE || "",
+    virtual_account:
+      process.env.DUITKU_VA_PAYMENT_CODE || "BC",
+
+    qris:
+      process.env.DUITKU_QRIS_PAYMENT_CODE || "",
+
+    ewallet:
+      process.env.DUITKU_EWALLET_PAYMENT_CODE || "",
   };
 
-  const paymentCode = paymentMethodCodes[paymentMethod]?.trim();
+  const paymentCode =
+    paymentMethodCodes[paymentMethod]?.trim();
 
   return paymentCode || null;
 }
@@ -54,7 +69,9 @@ export function buildDuitkuSignature(input: {
 }) {
   return crypto
     .createHash("md5")
-    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`)
+    .update(
+      `${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`
+    )
     .digest("hex");
 }
 
@@ -66,7 +83,9 @@ export function buildDuitkuInquirySignature(input: {
 }) {
   return crypto
     .createHash("md5")
-    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`)
+    .update(
+      `${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`
+    )
     .digest("hex");
 }
 
@@ -77,7 +96,9 @@ export function buildDuitkuCreateInvoiceSignature(input: {
 }) {
   return crypto
     .createHmac("sha256", input.apiKey)
-    .update(`${input.merchantCode}${input.timestamp}`)
+    .update(
+      `${input.merchantCode}${input.timestamp}`
+    )
     .digest("hex");
 }
 
@@ -87,16 +108,17 @@ export function buildDuitkuCallbackSignature(input: {
   merchantOrderId: string;
   apiKey: string;
 }) {
-  // Duitku callback signature:
-  // stringToSign = merchantCode + amount + merchantOrderId
-  // signature = HMAC_SHA256(stringToSign, apiKey)
   return crypto
     .createHmac("sha256", input.apiKey)
-    .update(`${input.merchantCode}${input.amount}${input.merchantOrderId}`)
+    .update(
+      `${input.merchantCode}${input.amount}${input.merchantOrderId}`
+    )
     .digest("hex");
 }
 
-export function normalizePhoneNumber(phoneNumber: string) {
+export function normalizePhoneNumber(
+  phoneNumber: string
+) {
   const digits = phoneNumber.replace(/\D/g, "");
 
   if (digits.startsWith("62")) {
@@ -110,45 +132,68 @@ export function normalizePhoneNumber(phoneNumber: string) {
   return digits;
 }
 
-export function validateDuitkuRequestPayload(payload: Partial<DuitkuTransactionPayload>) {
-  const requiredFields: (keyof DuitkuTransactionPayload)[] = [
-    "customerName",
-    "customerEmail",
-    "customerWhatsapp",
-    "packageName",
-    "packageDescription",
-    "amount",
-    "paymentMethod",
-    "invoiceId",
-    "orderId",
-  ];
+export function validateDuitkuRequestPayload(
+  payload: Partial<DuitkuTransactionPayload>
+) {
+  const requiredFields: (keyof DuitkuTransactionPayload)[] =
+    [
+      "customerName",
+      "customerEmail",
+      "customerWhatsapp",
+      "packageName",
+      "packageDescription",
+      "amount",
+      "paymentMethod",
+      "invoiceId",
+      "orderId",
+    ];
 
-  const missingFields = requiredFields.filter((field) => {
-    const value = payload[field];
-    return value === undefined || value === null || value === "";
-  });
+  const missingFields = requiredFields.filter(
+    (field) => {
+      const value = payload[field];
+
+      return (
+        value === undefined ||
+        value === null ||
+        value === ""
+      );
+    }
+  );
 
   if (missingFields.length > 0) {
     return {
       valid: false,
       code: "VALIDATION_ERROR",
-      message: `Field wajib belum lengkap: ${missingFields.join(", ")}.`,
+      message: `Field wajib belum lengkap: ${missingFields.join(
+        ", "
+      )}.`,
     };
   }
 
-  if (typeof payload.amount !== "number" || !Number.isFinite(payload.amount) || payload.amount <= 0) {
+  if (
+    typeof payload.amount !== "number" ||
+    !Number.isFinite(payload.amount) ||
+    payload.amount <= 0
+  ) {
     return {
       valid: false,
       code: "VALIDATION_ERROR",
-      message: "Amount harus berupa number dan lebih besar dari 0.",
+      message:
+        "Amount harus berupa number dan lebih besar dari 0.",
     };
   }
 
-  if (payload.paymentMethod === "bank_transfer_manual" || payload.paymentMethod === "ewallet_manual") {
+  if (
+    payload.paymentMethod ===
+      "bank_transfer_manual" ||
+    payload.paymentMethod ===
+      "ewallet_manual"
+  ) {
     return {
       valid: false,
       code: "INVALID_PAYMENT_METHOD",
-      message: "Metode pembayaran belum aktif atau tidak dapat diproses melalui Duitku.",
+      message:
+        "Metode pembayaran belum aktif atau tidak dapat diproses melalui Duitku.",
     };
   }
 

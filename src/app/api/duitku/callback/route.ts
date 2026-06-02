@@ -1,4 +1,5 @@
 import { buildDuitkuCallbackSignature, getDuitkuConfig } from "@/lib/duitku";
+import { prisma } from "@/lib/prisma";
 
 interface DuitkuCallbackPayload {
   merchantCode?: string;
@@ -26,25 +27,62 @@ async function parseCallbackPayload(request: Request) {
   return Object.fromEntries(formData.entries()) as DuitkuCallbackPayload;
 }
 
-function normalizeCallbackStatus(resultCode?: string) {
+function normalizeStatuses(resultCode?: string) {
   if (resultCode === "00") {
-    return "paid";
+    return {
+      orderStatus: "PAID" as const,
+      invoiceStatus: "PAID" as const,
+      paymentStatus: "PAID" as const,
+      paidAt: new Date(),
+    };
   }
 
   if (resultCode === "01") {
-    return "failed";
+    return {
+      orderStatus: "FAILED" as const,
+      invoiceStatus: "FAILED" as const,
+      paymentStatus: "FAILED" as const,
+      paidAt: null,
+    };
   }
 
-  return "pending";
+  return {
+    orderStatus: "WAITING_PAYMENT" as const,
+    invoiceStatus: "PENDING" as const,
+    paymentStatus: "PENDING" as const,
+    paidAt: null,
+  };
 }
 
 export async function POST(request: Request) {
   try {
     const payload = await parseCallbackPayload(request);
-    const { apiKey } = getDuitkuConfig();
+    const { apiKey, merchantCode } = getDuitkuConfig();
 
-    if (!payload.merchantCode || !payload.amount || !payload.merchantOrderId || !payload.signature || !apiKey) {
-      return Response.json({ success: false, message: "Invalid callback payload" }, { status: 400 });
+    if (
+      !payload.merchantCode ||
+      !payload.amount ||
+      !payload.merchantOrderId ||
+      !payload.signature ||
+      !apiKey
+    ) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid callback payload",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (payload.merchantCode !== merchantCode) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid merchant code",
+        },
+        { status: 400 }
+      );
     }
 
     const expectedSignature = buildDuitkuCallbackSignature({
@@ -55,22 +93,109 @@ export async function POST(request: Request) {
     });
 
     if (payload.signature !== expectedSignature) {
-      return Response.json({ success: false, message: "Invalid signature" }, { status: 400 });
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid signature",
+        },
+        { status: 400 }
+      );
     }
 
-    const paymentStatus = normalizeCallbackStatus(payload.resultCode);
+    const statuses = normalizeStatuses(payload.resultCode);
 
-    console.info("Duitku callback received", {
+    const payment = await prisma.payment.findFirst({
+      where: {
+        OR: [
+          {
+            merchantOrderId: payload.merchantOrderId,
+          },
+          {
+            providerReference: payload.reference,
+          },
+        ],
+      },
+      include: {
+        order: {
+          include: {
+            invoice: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      console.error("Duitku callback payment not found", {
+        merchantOrderId: payload.merchantOrderId,
+        reference: payload.reference,
+        resultCode: payload.resultCode,
+      });
+
+      return Response.json(
+        {
+          success: false,
+          message: "Payment not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          status: statuses.paymentStatus,
+          providerReference: payload.reference ?? payment.providerReference,
+          paymentCode: payload.paymentCode ?? payment.paymentCode,
+        },
+      }),
+
+      prisma.order.update({
+        where: {
+          id: payment.orderIdRef,
+        },
+        data: {
+          status: statuses.orderStatus,
+        },
+      }),
+
+      prisma.invoice.updateMany({
+        where: {
+          orderIdRef: payment.orderIdRef,
+        },
+        data: {
+          status: statuses.invoiceStatus,
+          paidAt: statuses.paidAt,
+        },
+      }),
+    ]);
+
+    console.info("Duitku callback processed", {
       merchantOrderId: payload.merchantOrderId,
       reference: payload.reference,
       resultCode: payload.resultCode,
       amount: payload.amount,
-      paymentStatus,
+      paymentStatus: statuses.paymentStatus,
+      orderStatus: statuses.orderStatus,
+      invoiceStatus: statuses.invoiceStatus,
     });
 
-    // TODO: When database is added, update invoice/order status by merchantOrderId or reference here.
-    return Response.json({ success: true });
-  } catch {
-    return Response.json({ success: false, message: "Invalid callback payload" }, { status: 400 });
+    return Response.json({
+      success: true,
+    });
+  } catch (reason) {
+    console.error("Duitku callback error", {
+      message: reason instanceof Error ? reason.message : "Unknown error",
+    });
+
+    return Response.json(
+      {
+        success: false,
+        message: "Invalid callback payload",
+      },
+      { status: 400 }
+    );
   }
 }

@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum OrderStatus {
+  WAITING_PAYMENT
+  PAID
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  VIRTUAL_ACCOUNT
+  QRIS
+  EWALLET
+  BANK_TRANSFER_MANUAL
+  EWALLET_MANUAL
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  orderId          String      @unique
+  status           OrderStatus @default(WAITING_PAYMENT)
+
+  customerName     String
+  customerEmail    String
+  customerWhatsapp String
+  businessName     String?
+
+  packageName        String
+  packageDescription String @db.Text
+  quantity           Int    @default(1)
+  price              Int
+  subtotal           Int
+  total              Int
+  notes              String? @db.Text
+
+  invoice Invoice?
+  payment Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerEmail])
+  @@index([status])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceId     String        @unique
+  status        InvoiceStatus @default(PENDING)
+  paymentMethod PaymentMethod
+
+  orderIdRef String @unique
+  order      Order  @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
+
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  status        PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod
+
+  provider            String?
+  providerReference   String?
+  providerPaymentUrl  String? @db.Text
+  merchantOrderId     String? @unique
+  paymentCode         String?
+  vaNumber            String?
+  qrString            String? @db.Text
+
+  amount Int
+
+  orderIdRef String @unique
+  order      Order  @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([providerReference])
+}
