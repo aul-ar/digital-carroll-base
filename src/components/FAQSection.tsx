@@ -19,7 +19,7 @@ export const FAQSection: React.FC = () => {
     },
     {
       question: "Metode pembayaran apa saja yang tersedia?",
-      answer: "Website mendukung pilihan pembayaran otomatis melalui Virtual Account, QRIS All Payment, dan E-Wallet melalui integrasi Duitku Sandbox. Pembayaran manual melalui transfer bank dan e-wallet juga tersedia sebagai alternatif."
+      answer: "Website mendukung pembayaran otomatis melalui Virtual Account via Duitku. QRIS All Payment dan E-Wallet otomatis belum aktif di Production, sementara pembayaran manual melalui transfer bank dan e-wallet tetap tersedia sebagai alternatif."
     },
     {
       question: "Apakah saya tetap bisa konsultasi lewat WhatsApp?",

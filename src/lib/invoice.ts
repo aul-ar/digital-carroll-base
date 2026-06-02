@@ -50,9 +50,9 @@ export const manualPaymentDetails = {
 };
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
-  virtual_account: "Virtual Account via Duitku Sandbox",
-  qris: "QRIS All Payment via Duitku Sandbox",
-  ewallet: "E-Wallet via Duitku Sandbox",
+  virtual_account: "Virtual Account via Duitku",
+  qris: "QRIS All Payment via Duitku",
+  ewallet: "E-Wallet via Duitku",
   bank_transfer_manual: "Transfer Bank BCA Manual",
   ewallet_manual: "E-Wallet Manual",
 };

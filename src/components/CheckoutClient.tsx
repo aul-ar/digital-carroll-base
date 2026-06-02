@@ -13,6 +13,7 @@ interface DuitkuCreateTransactionResponse {
   success: boolean;
   code?: string;
   message?: string;
+  detail?: string;
   data?: {
     reference?: string;
     paymentUrl?: string;
@@ -34,6 +35,8 @@ interface PaymentOption {
   title: string;
   description: string;
   icon: typeof CreditCard;
+  badgeLabel?: string;
+  disabled?: boolean;
   details?: {
     label: string;
     value: string;
@@ -45,21 +48,25 @@ const automaticPaymentOptions: PaymentOption[] = [
     id: "virtual_account",
     title: "Virtual Account",
     description:
-      "Pembayaran melalui nomor Virtual Account yang dibuat otomatis oleh sistem Duitku Sandbox untuk setiap transaksi.",
+      "Pembayaran melalui nomor Virtual Account yang dibuat otomatis oleh sistem Duitku untuk setiap transaksi.",
     icon: Landmark,
   },
   {
     id: "qris",
     title: "QRIS All Payment",
     description:
-      "Bayar menggunakan aplikasi apa pun yang mendukung QRIS, seperti mobile banking, GoPay, OVO, DANA, ShopeePay, dan aplikasi pembayaran lainnya.",
+      "Belum aktif di Production. Gunakan Virtual Account atau pembayaran manual untuk saat ini.",
     icon: QrCode,
+    badgeLabel: "Belum aktif di Production",
+    disabled: true,
   },
   {
     id: "ewallet",
     title: "E-Wallet",
-    description: "Pembayaran melalui dompet digital yang didukung oleh sistem Duitku Sandbox.",
+    description: "Belum aktif di Production. Gunakan Virtual Account atau E-Wallet Manual untuk saat ini.",
     icon: Wallet,
+    badgeLabel: "Belum aktif di Production",
+    disabled: true,
   },
 ];
 
@@ -105,20 +112,26 @@ function isManualPayment(method: PaymentMethod | "") {
   return method === "bank_transfer_manual" || method === "ewallet_manual";
 }
 
-function getDuitkuErrorMessage(code?: string) {
+function isAutomaticPaymentActive(method: PaymentMethod) {
+  return method === "virtual_account";
+}
+
+function getDuitkuErrorMessage(code?: string, serverMessage?: string, detail?: string) {
   if (code === "MISSING_DUITKU_ENV") {
-    return "Konfigurasi Duitku Sandbox belum lengkap. Periksa Environment Variables di Vercel.";
+    return "Konfigurasi Duitku belum lengkap. Periksa Environment Variables di Vercel.";
   }
 
   if (code === "INVALID_PAYMENT_METHOD") {
-    return "Metode pembayaran ini belum tersedia untuk integrasi Duitku Sandbox.";
+    return serverMessage || "Metode pembayaran ini belum aktif di Duitku Production.";
   }
 
   if (code === "DUITKU_REQUEST_FAILED") {
-    return "Duitku Sandbox menolak transaksi. Periksa konfigurasi channel pembayaran atau signature.";
+    const baseMessage = "Duitku menolak transaksi. Periksa konfigurasi channel pembayaran atau signature.";
+
+    return detail ? `${baseMessage} Detail: ${detail}` : baseMessage;
   }
 
-  return "Gagal menyiapkan transaksi Duitku Sandbox. Silakan coba lagi.";
+  return serverMessage || "Gagal menyiapkan transaksi Duitku. Silakan coba lagi.";
 }
 
 interface CheckoutClientProps {
@@ -220,7 +233,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       const transaction = (await response.json()) as DuitkuCreateTransactionResponse;
 
       if (!response.ok || !transaction.success) {
-        setPaymentError(getDuitkuErrorMessage(transaction.code));
+        setPaymentError(getDuitkuErrorMessage(transaction.code, transaction.message, transaction.detail));
         setIsProcessing(false);
         return;
       }
@@ -287,23 +300,37 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       return;
     }
 
+    if (!isAutomaticPaymentActive(method)) {
+      setPaymentError("Metode pembayaran ini belum aktif di Duitku Production.");
+      return;
+    }
+
     handleAutomaticPayment(method);
   }
 
   function renderPaymentCard(option: PaymentOption) {
     const Icon = option.icon;
     const selected = selectedPaymentMethod === option.id;
+    const badgeLabel = option.badgeLabel ?? (isManualPayment(option.id) ? "Manual" : "Duitku");
+    const badgeClassName = option.disabled
+      ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+      : isManualPayment(option.id)
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
 
     return (
       <button
         key={option.id}
         type="button"
+        disabled={option.disabled}
         onClick={() => {
           setSelectedPaymentMethod(option.id);
           setPaymentError("");
         }}
         className={`w-full rounded-2xl border p-4 text-left transition ${
-          selected
+          option.disabled
+            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75 dark:border-slate-800 dark:bg-slate-900"
+            : selected
             ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
             : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
         }`}
@@ -321,14 +348,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-bold text-slate-950 dark:text-white">{option.title}</h3>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                  isManualPayment(option.id)
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                }`}
-              >
-                {isManualPayment(option.id) ? "Manual" : "Duitku Sandbox"}
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${badgeClassName}`}>
+                {badgeLabel}
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{option.description}</p>
@@ -430,14 +451,14 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           <div className="mb-5">
             <h2 className="text-lg font-bold text-slate-950 dark:text-white">Pilih Metode Pembayaran</h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Silakan pilih metode pembayaran yang paling sesuai. Pembayaran otomatis akan diproses melalui Duitku Sandbox, sedangkan pembayaran manual memerlukan konfirmasi melalui WhatsApp.
+              Silakan pilih metode pembayaran yang paling sesuai. Pembayaran otomatis akan diproses melalui Duitku, sedangkan pembayaran manual memerlukan konfirmasi melalui WhatsApp.
             </p>
           </div>
 
           <div className="space-y-5">
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                Pembayaran Otomatis via Duitku Sandbox
+                Pembayaran Otomatis via Duitku
               </p>
               <div className="grid gap-3 md:grid-cols-3">{automaticPaymentOptions.map(renderPaymentCard)}</div>
             </div>

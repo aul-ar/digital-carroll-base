@@ -1,5 +1,5 @@
 import {
-  buildDuitkuInquirySignature,
+  buildDuitkuCreateInvoiceSignature,
   createMerchantOrderId,
   DuitkuTransactionPayload,
   getDuitkuConfig,
@@ -15,7 +15,7 @@ type DuitkuErrorCode =
   | "UNKNOWN_ERROR"
   | "VALIDATION_ERROR";
 
-interface DuitkuInquiryResponse {
+interface DuitkuCreateInvoiceResponse {
   merchantCode?: string;
   reference?: string;
   paymentUrl?: string;
@@ -31,18 +31,18 @@ async function readDuitkuResponse(response: Response) {
   const text = await response.text();
 
   if (!text) {
-    return {} as DuitkuInquiryResponse;
+    return {} as DuitkuCreateInvoiceResponse;
   }
 
   try {
-    return JSON.parse(text) as DuitkuInquiryResponse;
+    return JSON.parse(text) as DuitkuCreateInvoiceResponse;
   } catch {
     return { statusMessage: text };
   }
 }
 
-function getSafeStatusMessage(response: DuitkuInquiryResponse) {
-  return response.statusMessage ?? response.Message ?? "Duitku Sandbox tidak mengembalikan pesan detail.";
+function getSafeStatusMessage(response: DuitkuCreateInvoiceResponse) {
+  return response.statusMessage ?? response.Message ?? "Duitku tidak mengembalikan pesan detail.";
 }
 
 function logDuitkuError(input: {
@@ -53,7 +53,7 @@ function logDuitkuError(input: {
   paymentMethod?: string;
   duitkuPaymentMethodCode?: string | null;
 }) {
-  console.error("Duitku Sandbox transaction error", {
+  console.error("Duitku transaction error", {
     code: input.code,
     httpStatus: input.httpStatus,
     statusMessage: input.statusMessage,
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         {
           success: false,
           code: "MISSING_DUITKU_ENV",
-          message: "Konfigurasi Duitku Sandbox belum lengkap di server.",
+          message: "Konfigurasi Duitku belum lengkap di server.",
         },
         { status: 500 }
       );
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
         {
           success: false,
           code: "INVALID_PAYMENT_METHOD",
-          message: "Metode pembayaran tidak dapat diproses melalui Duitku Sandbox.",
+          message: "Metode pembayaran ini belum aktif di Duitku Production.",
         },
         { status: 400 }
       );
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       return Response.json({
         success: true,
         provider: "duitku",
-        environment: "sandbox-mock",
+        environment: "mock",
         data: {
           reference: `MOCK-${merchantOrderId}`,
           paymentUrl: null,
@@ -128,15 +128,14 @@ export async function POST(request: Request) {
     const returnUrl = `${config.siteUrl}/payment/pending?invoiceId=${encodeURIComponent(payload.invoiceId)}`;
     const productDetails = `Digital Carroll Base - ${payload.packageName}`;
     const phoneNumber = normalizePhoneNumber(payload.customerWhatsapp);
-    const signature = buildDuitkuInquirySignature({
+    const timestamp = Date.now().toString();
+    const signature = buildDuitkuCreateInvoiceSignature({
       merchantCode: config.merchantCode,
-      merchantOrderId,
-      amount: payload.amount,
+      timestamp,
       apiKey: config.apiKey,
     });
 
     const duitkuPayload = {
-      merchantCode: config.merchantCode,
       paymentAmount: payload.amount,
       paymentMethod: duitkuPaymentMethodCode,
       merchantOrderId,
@@ -160,26 +159,29 @@ export async function POST(request: Request) {
       },
       callbackUrl,
       returnUrl,
-      signature,
       expiryPeriod: 60,
     };
 
-    const duitkuResponse = await fetch(`${config.sandboxBaseUrl}/webapi/api/merchant/v2/inquiry`, {
+    const duitkuResponse = await fetch(`${config.baseUrl}/api/merchant/createInvoice`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-duitku-signature": signature,
+        "x-duitku-timestamp": timestamp,
+        "x-duitku-merchantcode": config.merchantCode,
+      },
       body: JSON.stringify(duitkuPayload),
       cache: "no-store",
     });
 
     const duitkuData = await readDuitkuResponse(duitkuResponse);
-    const hasPaymentInstruction = Boolean(duitkuData.paymentUrl || duitkuData.vaNumber || duitkuData.qrString);
-    const isSuccess = duitkuResponse.ok && duitkuData.statusCode === "00";
+    const isSuccess = duitkuResponse.ok && duitkuData.statusCode === "00" && Boolean(duitkuData.paymentUrl);
 
-    if (isSuccess && hasPaymentInstruction) {
+    if (isSuccess) {
       return Response.json({
         success: true,
         provider: "duitku",
-        environment: "sandbox",
+        environment: "production",
         data: {
           reference: duitkuData.reference,
           paymentUrl: duitkuData.paymentUrl,
@@ -207,8 +209,9 @@ export async function POST(request: Request) {
       {
         success: false,
         code: "DUITKU_REQUEST_FAILED",
-        message: "Gagal membuat transaksi Duitku Sandbox.",
+        message: "Gagal membuat transaksi Duitku.",
         detail: getSafeStatusMessage(duitkuData),
+        duitkuResponse: duitkuData,
       },
       { status: duitkuResponse.ok ? 400 : 500 }
     );
@@ -221,7 +224,7 @@ export async function POST(request: Request) {
       {
         success: false,
         code: "UNKNOWN_ERROR",
-        message: "Gagal membuat transaksi Duitku Sandbox.",
+        message: "Gagal membuat transaksi Duitku.",
       },
       { status: 500 }
     );

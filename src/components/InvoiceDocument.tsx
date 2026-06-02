@@ -193,7 +193,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
               {invoice.qrString && (
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">QRIS</p>
-                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">QRIS tersedia dari transaksi Duitku Sandbox.</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">QRIS tersedia dari transaksi Duitku.</p>
                 </div>
               )}
               {invoice.providerPaymentUrl && invoice.paymentStatus === "pending" && (

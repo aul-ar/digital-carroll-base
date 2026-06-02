@@ -16,26 +16,30 @@ export interface DuitkuTransactionPayload {
 }
 
 export function getDuitkuConfig() {
-  const sandboxBaseUrl = process.env.DUITKU_SANDBOX_BASE_URL ?? "https://sandbox.duitku.com";
+  const baseUrl =
+    process.env.DUITKU_BASE_URL ??
+    process.env.DUITKU_SANDBOX_BASE_URL ??
+    "https://api-prod.duitku.com";
 
   return {
     merchantCode: process.env.DUITKU_MERCHANT_CODE ?? "",
     apiKey: process.env.DUITKU_API_KEY ?? "",
-    sandboxBaseUrl: sandboxBaseUrl.replace(/\/$/, ""),
+    baseUrl: baseUrl.replace(/\/$/, ""),
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://carrollbase.com",
     mockEnabled: process.env.NEXT_PUBLIC_ENABLE_DUITKU_MOCK === "true",
   };
 }
 
 export function mapPaymentMethodToDuitkuCode(paymentMethod: PaymentMethod) {
-  // Sesuaikan paymentMethod code dengan channel yang aktif di dashboard Duitku Sandbox.
   const paymentMethodCodes: Partial<Record<PaymentMethod, string>> = {
-    virtual_account: process.env.DUITKU_VA_PAYMENT_CODE || "VC",
-    qris: process.env.DUITKU_QRIS_PAYMENT_CODE || "SP",
-    ewallet: process.env.DUITKU_EWALLET_PAYMENT_CODE || "OV",
+    virtual_account: process.env.DUITKU_VA_PAYMENT_CODE || "BC",
+    qris: process.env.DUITKU_QRIS_PAYMENT_CODE || "",
+    ewallet: process.env.DUITKU_EWALLET_PAYMENT_CODE || "",
   };
 
-  return paymentMethodCodes[paymentMethod] ?? null;
+  const paymentCode = paymentMethodCodes[paymentMethod]?.trim();
+
+  return paymentCode || null;
 }
 
 export function createMerchantOrderId(orderId: string) {
@@ -48,12 +52,9 @@ export function buildDuitkuSignature(input: {
   amount: number;
   apiKey: string;
 }) {
-  // Duitku API v2 inquiry signature:
-  // stringToSign = merchantCode + merchantOrderId + paymentAmount
-  // signature = HMAC_SHA256(stringToSign, apiKey)
   return crypto
-    .createHmac("sha256", input.apiKey)
-    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}`)
+    .createHash("md5")
+    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`)
     .digest("hex");
 }
 
@@ -63,11 +64,20 @@ export function buildDuitkuInquirySignature(input: {
   amount: number;
   apiKey: string;
 }) {
-  // Duitku API v2 inquiry endpoint uses HMAC SHA256 over:
-  // merchantCode + merchantOrderId + paymentAmount.
+  return crypto
+    .createHash("md5")
+    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}${input.apiKey}`)
+    .digest("hex");
+}
+
+export function buildDuitkuCreateInvoiceSignature(input: {
+  merchantCode: string;
+  timestamp: string;
+  apiKey: string;
+}) {
   return crypto
     .createHmac("sha256", input.apiKey)
-    .update(`${input.merchantCode}${input.merchantOrderId}${input.amount}`)
+    .update(`${input.merchantCode}${input.timestamp}`)
     .digest("hex");
 }
 
@@ -134,15 +144,11 @@ export function validateDuitkuRequestPayload(payload: Partial<DuitkuTransactionP
     };
   }
 
-  if (
-    payload.paymentMethod === "bank_transfer_manual" ||
-    payload.paymentMethod === "ewallet_manual" ||
-    !mapPaymentMethodToDuitkuCode(payload.paymentMethod as PaymentMethod)
-  ) {
+  if (payload.paymentMethod === "bank_transfer_manual" || payload.paymentMethod === "ewallet_manual") {
     return {
       valid: false,
       code: "INVALID_PAYMENT_METHOD",
-      message: "Metode pembayaran tidak dapat diproses melalui Duitku Sandbox.",
+      message: "Metode pembayaran belum aktif atau tidak dapat diproses melalui Duitku.",
     };
   }
 
