@@ -143,6 +143,20 @@ export const pricingPlans: PricingPlan[] = [
     ]
   },
   {
+    id: "plan-test-payment",
+    name: "Test Payment Callback",
+    price: "Rp 1.000",
+    description: "Paket khusus untuk pengujian integrasi pembayaran dan callback Duitku.",
+    popular: false,
+    deliveryTime: "Instan",
+    targetServiceSlug: "landing-page",
+    features: [
+      { text: "Khusus pengujian callback", included: true },
+      { text: "Verifikasi update database", included: true },
+      { text: "Verifikasi status pembayaran", included: true }
+    ]
+  },
+  {
     id: "plan-website-sesuai-kebutuhan",
     name: "Website Sesuai Kebutuhan",
     price: "Konsultasi Kebutuhan",
