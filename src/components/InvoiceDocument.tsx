@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, MessageCircle, Printer } from "lucide-react";
+import { InvoiceCountdown } from "@/components/invoice-countdown";
 import {
   buildWhatsAppInvoiceMessage,
   formatCurrency,
@@ -21,10 +23,47 @@ const statusStyles = {
   expired: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };
 
+const statusBadgeLabels: Record<Invoice["paymentStatus"], string> = {
+  pending: statusLabels.pending,
+  paid: statusLabels.paid,
+  failed: statusLabels.failed,
+  expired: "EXPIRED",
+};
+
+function isPastDue(invoice: Invoice) {
+  if (invoice.paymentStatus !== "pending" || !invoice.expiresAt) {
+    return false;
+  }
+
+  const expiresAtTime = new Date(invoice.expiresAt).getTime();
+
+  return Number.isFinite(expiresAtTime) && Date.now() >= expiresAtTime;
+}
+
 export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
-  const showManualDetails = isManualPayment(invoice.paymentMethod);
+  const [countdownExpired, setCountdownExpired] = useState(() => isPastDue(invoice));
   const waLink = getWhatsAppLink(buildWhatsAppInvoiceMessage(invoice));
-  const status = invoice.paymentStatus;
+  const status = invoice.paymentStatus === "pending" && countdownExpired ? "expired" : invoice.paymentStatus;
+  const isExpired = status === "expired";
+  const canPay = status === "pending";
+  const showCountdown = canPay && Boolean(invoice.expiresAt);
+  const showManualDetails = canPay && isManualPayment(invoice.paymentMethod);
+  const showDuitkuDetails =
+    Boolean(invoice.providerReference) ||
+    Boolean(invoice.vaNumber) ||
+    Boolean(invoice.qrString) ||
+    Boolean(invoice.providerPaymentUrl && canPay);
+
+  useEffect(() => {
+    setCountdownExpired(isPastDue(invoice));
+  }, [invoice]);
+
+  const handleCountdownExpire = useCallback(() => {
+    setCountdownExpired(true);
+    void fetch(`/api/invoice/${encodeURIComponent(invoice.invoiceId)}`, {
+      cache: "no-store",
+    }).catch(() => undefined);
+  }, [invoice.invoiceId]);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 pb-16">
@@ -37,7 +76,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           Kembali ke Beranda
         </Link>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {invoice.paymentStatus === "pending" && (
+          {canPay && (
             <a
               href={waLink}
               target="_blank"
@@ -74,7 +113,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
           </div>
           <div className="space-y-2 text-left sm:text-right">
             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${statusStyles[status]}`}>
-              {statusLabels[status]}
+              {statusBadgeLabels[status]}
             </span>
             <div className="text-sm text-slate-600 dark:text-slate-300">
               <p className="font-semibold text-slate-900 dark:text-white">{invoice.invoiceId}</p>
@@ -109,6 +148,16 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             </p>
           </div>
         </section>
+
+        {showCountdown && invoice.expiresAt && (
+          <InvoiceCountdown expiresAt={invoice.expiresAt} onExpire={handleCountdownExpire} />
+        )}
+
+        {isExpired && (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+            Invoice telah melewati batas waktu pembayaran dan tidak dapat digunakan kembali.
+          </div>
+        )}
 
         <section className="grid gap-6 border-b border-slate-200 py-6 dark:border-slate-800 md:grid-cols-2">
           <div>
@@ -176,7 +225,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
             <span className="text-slate-500 dark:text-slate-400">Metode Pembayaran: </span>
             <span className="font-bold text-slate-900 dark:text-white">{getPaymentMethodLabel(invoice.paymentMethod)}</span>
           </div>
-          {(invoice.providerReference || invoice.providerPaymentUrl || invoice.vaNumber || invoice.qrString) && (
+          {showDuitkuDetails && (
             <div className="mt-3 grid gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900 dark:bg-blue-950/20 sm:grid-cols-2">
               {invoice.providerReference && (
                 <div>
@@ -196,7 +245,7 @@ export function InvoiceDocument({ invoice }: { invoice: Invoice }) {
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">QRIS tersedia dari transaksi Duitku.</p>
                 </div>
               )}
-              {invoice.providerPaymentUrl && invoice.paymentStatus === "pending" && (
+              {invoice.providerPaymentUrl && canPay && (
                 <div className="sm:col-span-2">
                   <a
                     href={invoice.providerPaymentUrl}

@@ -6,6 +6,66 @@ datasource db {
   provider = "mysql"
 }
 
+model Order {
+  id                 String      @id @default(cuid())
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  businessName       String?
+  customerEmail      String
+  customerName       String
+  customerWhatsapp   String
+  notes              String?     @db.Text
+  orderId            String      @unique
+  packageDescription String      @db.Text
+  packageName        String
+  price              Int
+  quantity           Int         @default(1)
+  status             OrderStatus @default(WAITING_PAYMENT)
+  subtotal           Int
+  total              Int
+  invoice            Invoice?
+  payment            Payment?
+
+  @@index([customerEmail])
+  @@index([status])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceId     String        @unique
+  status        InvoiceStatus @default(PENDING)
+  paymentMethod PaymentMethod
+  orderIdRef    String        @unique
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  expiresAt     DateTime?
+  order         Order         @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  status             PaymentStatus @default(PENDING)
+  paymentMethod      PaymentMethod
+  provider           String?
+  providerReference  String?
+  providerPaymentUrl String?       @db.Text
+  merchantOrderId    String?       @unique
+  paymentCode        String?
+  vaNumber           String?
+  qrString           String?       @db.Text
+  amount             Int
+  orderIdRef         String        @unique
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  order              Order         @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([providerReference])
+}
+
 enum OrderStatus {
   WAITING_PAYMENT
   PAID
@@ -36,74 +96,4 @@ enum PaymentMethod {
   EWALLET
   BANK_TRANSFER_MANUAL
   EWALLET_MANUAL
-}
-
-model Order {
-  id               String      @id @default(cuid())
-  orderId          String      @unique
-  status           OrderStatus @default(WAITING_PAYMENT)
-
-  customerName     String
-  customerEmail    String
-  customerWhatsapp String
-  businessName     String?
-
-  packageName        String
-  packageDescription String @db.Text
-  quantity           Int    @default(1)
-  price              Int
-  subtotal           Int
-  total              Int
-  notes              String? @db.Text
-
-  invoice Invoice?
-  payment Payment?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([customerEmail])
-  @@index([status])
-}
-
-model Invoice {
-  id            String        @id @default(cuid())
-  invoiceId     String        @unique
-  status        InvoiceStatus @default(PENDING)
-  paymentMethod PaymentMethod
-
-  orderIdRef String @unique
-  order      Order  @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
-
-  paidAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-}
-
-model Payment {
-  id            String        @id @default(cuid())
-  status        PaymentStatus @default(PENDING)
-  paymentMethod PaymentMethod
-
-  provider            String?
-  providerReference   String?
-  providerPaymentUrl  String? @db.Text
-  merchantOrderId     String? @unique
-  paymentCode         String?
-  vaNumber            String?
-  qrString            String? @db.Text
-
-  amount Int
-
-  orderIdRef String @unique
-  order      Order  @relation(fields: [orderIdRef], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-  @@index([providerReference])
 }

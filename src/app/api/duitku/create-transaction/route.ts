@@ -8,7 +8,7 @@ import {
   validateDuitkuRequestPayload,
 } from "@/lib/duitku";
 import { pricingPlans } from "@/data/pricing";
-import { parsePackagePrice } from "@/lib/invoice";
+import { createInvoiceExpiresAt, parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod } from "@prisma/client";
 
@@ -45,7 +45,9 @@ function getSelectedPricingPlan(planId: unknown) {
   return pricingPlans.find((plan) => plan.id === planId) ?? null;
 }
 
-function mapPaymentMethodToPrisma(method: DuitkuTransactionPayload["paymentMethod"]): PaymentMethod {
+function mapPaymentMethodToPrisma(
+  method: DuitkuTransactionPayload["paymentMethod"]
+): PaymentMethod {
   switch (method) {
     case "virtual_account":
       return "VIRTUAL_ACCOUNT";
@@ -77,7 +79,11 @@ async function readDuitkuResponse(response: Response) {
 }
 
 function getSafeStatusMessage(response: DuitkuCreateInvoiceResponse) {
-  return response.statusMessage ?? response.Message ?? "Duitku tidak mengembalikan pesan detail.";
+  return (
+    response.statusMessage ??
+    response.Message ??
+    "Duitku tidak mengembalikan pesan detail."
+  );
 }
 
 function logDuitkuError(input: {
@@ -93,7 +99,9 @@ function logDuitkuError(input: {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
+    const body =
+      (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
+
     const selectedPlan = getSelectedPricingPlan(body.planId);
 
     if (!selectedPlan) {
@@ -107,7 +115,8 @@ export async function POST(request: Request) {
         {
           success: false,
           code: "VALIDATION_ERROR",
-          message: "Plan checkout tidak ditemukan. Silakan pilih paket dari halaman harga.",
+          message:
+            "Plan checkout tidak ditemukan. Silakan pilih paket dari halaman harga.",
         },
         { status: 400 }
       );
@@ -126,7 +135,8 @@ export async function POST(request: Request) {
         {
           success: false,
           code: "VALIDATION_ERROR",
-          message: "Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi terlebih dahulu.",
+          message:
+            "Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi terlebih dahulu.",
         },
         { status: 400 }
       );
@@ -142,7 +152,10 @@ export async function POST(request: Request) {
     const validation = validateDuitkuRequestPayload(normalizedBody);
 
     if (!validation.valid) {
-      const code = validation.code === "INVALID_PAYMENT_METHOD" ? "INVALID_PAYMENT_METHOD" : "VALIDATION_ERROR";
+      const code =
+        validation.code === "INVALID_PAYMENT_METHOD"
+          ? "INVALID_PAYMENT_METHOD"
+          : "VALIDATION_ERROR";
 
       logDuitkuError({
         code,
@@ -150,7 +163,14 @@ export async function POST(request: Request) {
         paymentMethod: normalizedBody.paymentMethod,
       });
 
-      return Response.json({ success: false, code, message: validation.message }, { status: 400 });
+      return Response.json(
+        {
+          success: false,
+          code,
+          message: validation.message,
+        },
+        { status: 400 }
+      );
     }
 
     const config = getDuitkuConfig();
@@ -170,8 +190,11 @@ export async function POST(request: Request) {
 
     const payload = normalizedBody as DuitkuTransactionPayloadWithMeta;
     const merchantOrderId = createMerchantOrderId(payload.orderId);
-    const duitkuPaymentMethodCode = mapPaymentMethodToDuitkuCode(payload.paymentMethod);
+    const duitkuPaymentMethodCode = mapPaymentMethodToDuitkuCode(
+      payload.paymentMethod
+    );
     const prismaPaymentMethod = mapPaymentMethodToPrisma(payload.paymentMethod);
+    const expiresAt = createInvoiceExpiresAt();
 
     if (!duitkuPaymentMethodCode) {
       logDuitkuError({
@@ -234,11 +257,13 @@ export async function POST(request: Request) {
         status: "PENDING",
         paymentMethod: prismaPaymentMethod,
         paidAt: null,
+        expiresAt,
       },
       create: {
         invoiceId: payload.invoiceId,
         status: "PENDING",
         paymentMethod: prismaPaymentMethod,
+        expiresAt,
         orderIdRef: order.id,
       },
     });
@@ -280,7 +305,9 @@ export async function POST(request: Request) {
     }
 
     const callbackUrl = `${config.siteUrl}/api/duitku/callback`;
-    const returnUrl = `${config.siteUrl}/payment/pending?invoiceId=${encodeURIComponent(payload.invoiceId)}`;
+    const returnUrl = `${config.siteUrl}/payment/pending?invoiceId=${encodeURIComponent(
+      payload.invoiceId
+    )}`;
     const productDetails = `Digital Carroll Base - ${payload.packageName}`;
     const phoneNumber = normalizePhoneNumber(payload.customerWhatsapp);
     const timestamp = Date.now().toString();
@@ -315,23 +342,36 @@ export async function POST(request: Request) {
       },
       callbackUrl,
       returnUrl,
-      expiryPeriod: 60,
+      expiryPeriod: 10,
     };
 
-    const duitkuResponse = await fetch(`${config.baseUrl}/api/merchant/createInvoice`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-duitku-signature": signature,
-        "x-duitku-timestamp": timestamp,
-        "x-duitku-merchantcode": config.merchantCode,
-      },
-      body: JSON.stringify(duitkuPayload),
-      cache: "no-store",
-    });
+    console.log("DUITKU REQUEST URL:", `${config.baseUrl}/api/merchant/createInvoice`);
+    console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
+
+    const duitkuResponse = await fetch(
+      `${config.baseUrl}/api/merchant/createInvoice`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-duitku-signature": signature,
+          "x-duitku-timestamp": timestamp,
+          "x-duitku-merchantcode": config.merchantCode,
+        },
+        body: JSON.stringify(duitkuPayload),
+        cache: "no-store",
+      }
+    );
 
     const duitkuData = await readDuitkuResponse(duitkuResponse);
-    const isSuccess = duitkuResponse.ok && duitkuData.statusCode === "00" && Boolean(duitkuData.paymentUrl);
+
+    console.log("DUITKU STATUS:", duitkuResponse.status);
+    console.log("DUITKU DATA:", duitkuData);
+
+    const isSuccess =
+      duitkuResponse.ok &&
+      duitkuData.statusCode === "00" &&
+      Boolean(duitkuData.paymentUrl);
 
     if (isSuccess) {
       await prisma.payment.update({

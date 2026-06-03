@@ -12,6 +12,7 @@ export interface InvoiceData {
   orderId: string;
   createdAt: string;
   paidAt?: string;
+  expiresAt?: string;
   paymentStatus: InvoiceStatus;
   paymentMethod: PaymentMethod;
   customerName: string;
@@ -65,8 +66,25 @@ export const statusLabels: Record<InvoiceStatus, string> = {
   pending: "Menunggu Pembayaran",
   paid: "Pembayaran Berhasil",
   failed: "Pembayaran Gagal",
-  expired: "Pembayaran Kedaluwarsa",
+  expired: "Invoice Expired",
 };
+
+/**
+ * Testing mode:
+ * Invoice akan expired dalam 10 menit.
+ *
+ * Setelah testing selesai dan siap production,
+ * ubah kembali menjadi:
+ *
+ * export const INVOICE_EXPIRATION_HOURS = 24;
+ * createInvoiceExpiresAt memakai:
+ * INVOICE_EXPIRATION_HOURS * 60 * 60 * 1000
+ */
+export const INVOICE_EXPIRATION_MINUTES = 10;
+
+export function createInvoiceExpiresAt(createdAt = new Date()) {
+  return new Date(createdAt.getTime() + INVOICE_EXPIRATION_MINUTES * 60 * 1000);
+}
 
 function getDatePart(date = new Date()) {
   return [
@@ -142,6 +160,8 @@ export function createInvoiceData(input: {
   notes?: string;
 }): Invoice {
   const { orderId, invoiceId } = generateOrderInvoiceIds();
+  const createdAt = new Date();
+  const expiresAt = createInvoiceExpiresAt(createdAt);
   const price =
     typeof input.packagePrice === "number"
       ? input.packagePrice
@@ -150,8 +170,9 @@ export function createInvoiceData(input: {
   return {
     invoiceId,
     orderId,
-    createdAt: new Date().toISOString(),
-    paymentStatus: "pending" as const,
+    createdAt: createdAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    paymentStatus: "pending",
     paymentMethod: input.paymentMethod,
     customerName: input.customerName,
     customerEmail: input.customerEmail,
