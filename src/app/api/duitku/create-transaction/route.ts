@@ -7,6 +7,8 @@ import {
   normalizePhoneNumber,
   validateDuitkuRequestPayload,
 } from "@/lib/duitku";
+import { pricingPlans } from "@/data/pricing";
+import { parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod } from "@prisma/client";
 
@@ -30,9 +32,18 @@ interface DuitkuCreateInvoiceResponse {
 }
 
 type DuitkuTransactionPayloadWithMeta = DuitkuTransactionPayload & {
+  planId?: string;
   businessName?: string;
   notes?: string;
 };
+
+function getSelectedPricingPlan(planId: unknown) {
+  if (typeof planId !== "string" || !planId.trim()) {
+    return null;
+  }
+
+  return pricingPlans.find((plan) => plan.id === planId) ?? null;
+}
 
 function mapPaymentMethodToPrisma(method: DuitkuTransactionPayload["paymentMethod"]): PaymentMethod {
   switch (method) {
@@ -83,7 +94,52 @@ function logDuitkuError(input: {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
-    const validation = validateDuitkuRequestPayload(body);
+    const selectedPlan = getSelectedPricingPlan(body.planId);
+
+    if (!selectedPlan) {
+      logDuitkuError({
+        code: "VALIDATION_ERROR",
+        statusMessage: "Plan checkout tidak ditemukan di pricingPlans.",
+        paymentMethod: body.paymentMethod,
+      });
+
+      return Response.json(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          message: "Plan checkout tidak ditemukan. Silakan pilih paket dari halaman harga.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const selectedAmount = parsePackagePrice(selectedPlan.price);
+
+    if (selectedAmount <= 0) {
+      logDuitkuError({
+        code: "VALIDATION_ERROR",
+        statusMessage: "Plan checkout tidak memiliki nominal pembayaran.",
+        paymentMethod: body.paymentMethod,
+      });
+
+      return Response.json(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          message: "Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi terlebih dahulu.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const normalizedBody: Partial<DuitkuTransactionPayloadWithMeta> = {
+      ...body,
+      packageName: selectedPlan.name,
+      packageDescription: selectedPlan.description,
+      amount: selectedAmount,
+    };
+
+    const validation = validateDuitkuRequestPayload(normalizedBody);
 
     if (!validation.valid) {
       const code = validation.code === "INVALID_PAYMENT_METHOD" ? "INVALID_PAYMENT_METHOD" : "VALIDATION_ERROR";
@@ -91,7 +147,7 @@ export async function POST(request: Request) {
       logDuitkuError({
         code,
         statusMessage: validation.message,
-        paymentMethod: body.paymentMethod,
+        paymentMethod: normalizedBody.paymentMethod,
       });
 
       return Response.json({ success: false, code, message: validation.message }, { status: 400 });
@@ -112,7 +168,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = body as DuitkuTransactionPayloadWithMeta;
+    const payload = normalizedBody as DuitkuTransactionPayloadWithMeta;
     const merchantOrderId = createMerchantOrderId(payload.orderId);
     const duitkuPaymentMethodCode = mapPaymentMethodToDuitkuCode(payload.paymentMethod);
     const prismaPaymentMethod = mapPaymentMethodToPrisma(payload.paymentMethod);

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
-import { getCheckoutPlan } from "@/lib/checkout-packages";
-import { createInvoiceData, PaymentMethod } from "@/lib/invoice";
+import { pricingPlans } from "@/data/pricing";
+import { createInvoiceData, formatCurrency, parsePackagePrice, PaymentMethod } from "@/lib/invoice";
 import { saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
@@ -140,7 +140,10 @@ interface CheckoutClientProps {
 
 export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const router = useRouter();
-  const selectedPlan = useMemo(() => getCheckoutPlan(initialPlanId), [initialPlanId]);
+  const selectedPlan = useMemo(
+    () => pricingPlans.find((plan) => plan.id === initialPlanId) ?? null,
+    [initialPlanId]
+  );
 
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
@@ -148,6 +151,81 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const [paymentError, setPaymentError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualInvoiceId, setManualInvoiceId] = useState("");
+
+  if (!selectedPlan) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 shadow-sm dark:border-red-900 dark:bg-red-950/25 dark:text-red-200 sm:p-6">
+        <h2 className="text-lg font-bold">Paket checkout tidak ditemukan</h2>
+        <p className="mt-2 leading-relaxed">
+          Silakan pilih paket dari halaman harga agar nama paket, deskripsi, dan nominal pembayaran sesuai data terbaru.
+        </p>
+        <Link
+          href="/harga"
+          className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-500"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Kembali ke Halaman Harga
+        </Link>
+      </div>
+    );
+  }
+
+  const selectedAmount = parsePackagePrice(selectedPlan.price);
+  const hasCheckoutAmount = selectedAmount > 0;
+  const consultationLink = getWhatsAppLink(
+    `Halo Digital Carroll Base, saya ingin konsultasi untuk paket ${selectedPlan.name}.`
+  );
+
+  if (!hasCheckoutAmount) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm dark:border-amber-900 dark:bg-amber-950/25 sm:p-6">
+          <h2 className="text-lg font-bold text-slate-950 dark:text-white">Paket Perlu Konsultasi</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+            Paket ini belum memiliki nominal tetap, jadi tidak akan dikirim ke Duitku. Silakan konsultasi dulu agar tim Digital Carroll Base dapat menentukan scope dan estimasi biaya yang tepat.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <a
+              href={consultationLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/15 transition hover:bg-emerald-500"
+            >
+              Konsultasi via WhatsApp
+              <ArrowRight className="h-4 w-4" />
+            </a>
+            <Link
+              href="/harga"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Halaman Harga
+            </Link>
+          </div>
+        </section>
+
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-28">
+          <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Ringkasan Pesanan</p>
+          <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{selectedPlan.name}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{selectedPlan.description}</p>
+
+          <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-500 dark:text-slate-400">Plan ID</span>
+              <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{selectedPlan.id}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-500 dark:text-slate-400">Harga</span>
+              <span className="text-right font-extrabold text-slate-950 dark:text-white">{selectedPlan.price}</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    );
+  }
+
+  const checkoutPlan = selectedPlan;
+  const checkoutAmount = selectedAmount;
 
   function updateCustomer(field: keyof CheckoutCustomer, value: string) {
     setCustomer((current) => ({ ...current, [field]: value }));
@@ -187,6 +265,11 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       return false;
     }
 
+    if (!hasCheckoutAmount) {
+      setPaymentError("Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi via WhatsApp.");
+      return false;
+    }
+
     setError("");
     setPaymentError("");
     return true;
@@ -199,9 +282,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       customerEmail: customer.email,
       customerWhatsapp: customer.whatsapp,
       businessName: customer.businessName,
-      packageName: selectedPlan.name,
-      packageDescription: selectedPlan.description,
-      packagePrice: selectedPlan.price,
+      packageName: checkoutPlan.name,
+      packageDescription: checkoutPlan.description,
+      packagePrice: checkoutAmount,
       notes: customer.notes,
     });
 
@@ -218,15 +301,18 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          planId: checkoutPlan.id,
           customerName: invoice.customerName,
           customerEmail: invoice.customerEmail,
           customerWhatsapp: invoice.customerWhatsapp,
+          businessName: invoice.businessName,
           packageName: invoice.packageName,
           packageDescription: invoice.packageDescription,
           amount: invoice.total,
           paymentMethod: invoice.paymentMethod,
           invoiceId: invoice.invoiceId,
           orderId: invoice.orderId,
+          notes: invoice.notes,
         }),
       });
 
@@ -273,7 +359,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   function handleManualPayment(method: PaymentMethod) {
     setIsProcessing(true);
     const invoice = createPendingInvoice(method);
-    const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${selectedPlan.name}. Nama saya ${customer.fullName}.`;
+    const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${checkoutPlan.name}. Nama saya ${customer.fullName}.`;
     setManualInvoiceId(invoice.invoiceId);
     window.open(getWhatsAppLink(message), "_blank", "noopener,noreferrer");
     window.setTimeout(() => {
@@ -489,7 +575,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               type="submit"
-              disabled={isProcessing}
+              disabled={isProcessing || !hasCheckoutAmount}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/15 transition hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitLabel}
@@ -508,17 +594,21 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-28">
         <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Ringkasan Pesanan</p>
-        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{selectedPlan.name}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{selectedPlan.description}</p>
+        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{checkoutPlan.name}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{checkoutPlan.description}</p>
 
         <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Plan ID</span>
-            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{selectedPlan.id}</span>
+            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{checkoutPlan.id}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Harga</span>
-            <span className="text-right font-extrabold text-slate-950 dark:text-white">{selectedPlan.priceLabel}</span>
+            <span className="text-right font-extrabold text-slate-950 dark:text-white">{checkoutPlan.price}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-slate-500 dark:text-slate-400">Total</span>
+            <span className="text-right font-extrabold text-slate-950 dark:text-white">{formatCurrency(checkoutAmount)}</span>
           </div>
         </div>
 

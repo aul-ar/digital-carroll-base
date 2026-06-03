@@ -2,15 +2,12 @@ import React from "react";
 import Link from "next/link";
 import { Check, X, Clock } from "lucide-react";
 import { PricingPlan } from "@/data/pricing";
-import { getPlanIdFromPricingPlan } from "@/lib/checkout-packages";
 
 interface PricingCardProps {
   plan: PricingPlan;
 }
 
 export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
-  const checkoutPlanId = getPlanIdFromPricingPlan(plan.id, plan.targetServiceSlug);
-
   return (
     <div
       className={`relative bg-white dark:bg-slate-900 border rounded-3xl p-8 hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full ${
@@ -86,7 +83,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan }) => {
       {/* Button Action */}
       <div>
         <Link
-          href={`/checkout?plan=${checkoutPlanId}`}
+          href={`/checkout?plan=${encodeURIComponent(plan.id)}`}
           className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-bold shadow-md transition-all duration-300 ${
             plan.popular
               ? "bg-white text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 dark:bg-slate-50 dark:text-blue-700"

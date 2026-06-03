@@ -145,7 +145,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "plan-test-payment",
     name: "Test Payment Callback",
-    price: "Rp 1.000",
+    price: "Rp 10.000",
     description: "Paket khusus untuk pengujian integrasi pembayaran dan callback Duitku.",
     popular: false,
     deliveryTime: "Instan",
