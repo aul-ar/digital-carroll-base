@@ -7,6 +7,7 @@ import {
   normalizePhoneNumber,
   validateDuitkuRequestPayload,
 } from "@/lib/duitku";
+import { sendAdminOrderCreatedEmail } from "@/lib/admin-email";
 import { pricingPlans } from "@/data/pricing";
 import { createInvoiceExpiresAt, parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
@@ -214,6 +215,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const existingOrder = await prisma.order.findUnique({
+      where: {
+        orderId: payload.orderId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
     const order = await prisma.order.upsert({
       where: {
         orderId: payload.orderId,
@@ -249,7 +259,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.invoice.upsert({
+    const invoice = await prisma.invoice.upsert({
       where: {
         invoiceId: payload.invoiceId,
       },
@@ -268,7 +278,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.payment.upsert({
+    const paymentRecord = await prisma.payment.upsert({
       where: {
         orderIdRef: order.id,
       },
@@ -288,6 +298,21 @@ export async function POST(request: Request) {
         orderIdRef: order.id,
       },
     });
+
+    if (!existingOrder) {
+      await sendAdminOrderCreatedEmail({
+        orderId: order.orderId,
+        invoiceId: invoice.invoiceId,
+        paymentId: paymentRecord.id,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerWhatsapp,
+        amount: order.total,
+        orderStatus: order.status,
+        paymentStatus: paymentRecord.status,
+        invoiceStatus: invoice.status,
+        createdAt: order.createdAt,
+      });
+    }
 
     if (config.mockEnabled) {
       return Response.json({

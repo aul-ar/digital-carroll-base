@@ -4,6 +4,7 @@ import type {
   InvoiceStatus as PrismaInvoiceStatus,
   PaymentMethod as PrismaPaymentMethod,
 } from "@prisma/client";
+import { sendAdminInvoiceExpiredEmail } from "@/lib/admin-email";
 import type { Invoice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
 
@@ -44,6 +45,8 @@ function shouldExpireInvoice(invoice: InvoiceRecord, now = new Date()) {
 }
 
 async function expireInvoice(invoice: InvoiceRecord, now = new Date()) {
+  let didExpireInvoice = false;
+
   await prisma.$transaction(async (transaction) => {
     const result = await transaction.invoice.updateMany({
       where: {
@@ -61,6 +64,8 @@ async function expireInvoice(invoice: InvoiceRecord, now = new Date()) {
     if (result.count === 0) {
       return;
     }
+
+    didExpireInvoice = true;
 
     await transaction.order.updateMany({
       where: {
@@ -86,6 +91,21 @@ async function expireInvoice(invoice: InvoiceRecord, now = new Date()) {
       },
     });
   });
+
+  if (didExpireInvoice) {
+    await sendAdminInvoiceExpiredEmail({
+      orderId: invoice.order.orderId,
+      invoiceId: invoice.invoiceId,
+      paymentId: invoice.order.payment?.id,
+      customerEmail: invoice.order.customerEmail,
+      customerPhone: invoice.order.customerWhatsapp,
+      amount: invoice.order.payment?.amount ?? invoice.order.total,
+      orderStatus: "CANCELLED",
+      paymentStatus: "EXPIRED",
+      invoiceStatus: "EXPIRED",
+      createdAt: invoice.order.createdAt,
+    });
+  }
 }
 
 function mapInvoiceRecordToInvoice(invoice: InvoiceRecord): Invoice {

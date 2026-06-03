@@ -1,4 +1,5 @@
 import { buildDuitkuCallbackSignature, getDuitkuConfig } from "@/lib/duitku";
+import { sendAdminPaymentPaidEmail } from "@/lib/admin-email";
 import { prisma } from "@/lib/prisma";
 
 interface DuitkuCallbackPayload {
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
     }
 
     const statuses = normalizeStatuses(payload.resultCode);
+    const isPaymentPaidTransition = statuses.paymentStatus === "PAID";
 
     const payment = await prisma.payment.findFirst({
       where: {
@@ -139,6 +141,8 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    const shouldSendPaidEmail = isPaymentPaidTransition && payment.status !== "PAID";
 
     await prisma.$transaction([
       prisma.payment.update({
@@ -181,6 +185,21 @@ export async function POST(request: Request) {
       orderStatus: statuses.orderStatus,
       invoiceStatus: statuses.invoiceStatus,
     });
+
+    if (shouldSendPaidEmail) {
+      await sendAdminPaymentPaidEmail({
+        orderId: payment.order.orderId,
+        invoiceId: payment.order.invoice?.invoiceId ?? payload.additionalParam ?? "-",
+        paymentId: payment.id,
+        customerEmail: payment.order.customerEmail,
+        customerPhone: payment.order.customerWhatsapp,
+        amount: payment.amount,
+        orderStatus: statuses.orderStatus,
+        paymentStatus: statuses.paymentStatus,
+        invoiceStatus: statuses.invoiceStatus,
+        createdAt: payment.order.createdAt,
+      });
+    }
 
     return Response.json({
       success: true,
