@@ -63,9 +63,9 @@ export function getPaymentMethodLabel(method: PaymentMethod) {
 
 export const statusLabels: Record<InvoiceStatus, string> = {
   pending: "Menunggu Pembayaran",
-  paid: "Sudah Dibayar",
+  paid: "Pembayaran Berhasil",
   failed: "Pembayaran Gagal",
-  expired: "Kadaluarsa",
+  expired: "Pembayaran Kedaluwarsa",
 };
 
 function getDatePart(date = new Date()) {
