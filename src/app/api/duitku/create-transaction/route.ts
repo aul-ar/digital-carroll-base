@@ -131,12 +131,29 @@ function logDuitkuError(input: {
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
+  let previousTimingAt = startedAt;
   const logTiming = (stage: string, extra?: Record<string, unknown>) => {
-    console.error("[TIMING] create-transaction", {
-      stage,
-      elapsedMs: Date.now() - startedAt,
-      ...extra,
-    });
+    const loggedAt = Date.now();
+    const elapsedMs = loggedAt - startedAt;
+    const deltaMs = loggedAt - previousTimingAt;
+    const extraDetails = extra
+      ? Object.entries(extra)
+          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+          .join(" ")
+      : "";
+    const message = [
+      `[TIMING] ${stage}`,
+      `route=create-transaction`,
+      `timestamp=${new Date(loggedAt).toISOString()}`,
+      `elapsedMs=${elapsedMs}`,
+      `deltaMs=${deltaMs}`,
+      extraDetails,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    console.error(message);
+    previousTimingAt = loggedAt;
   };
 
   logTiming("request_received");
