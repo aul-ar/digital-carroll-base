@@ -132,7 +132,7 @@ function logDuitkuError(input: {
 export async function POST(request: Request) {
   const startedAt = Date.now();
   const logTiming = (stage: string, extra?: Record<string, unknown>) => {
-    console.log("[TIMING] create-transaction", {
+    console.error("[TIMING] create-transaction", {
       stage,
       elapsedMs: Date.now() - startedAt,
       ...extra,
