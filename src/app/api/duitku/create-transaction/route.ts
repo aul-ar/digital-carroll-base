@@ -130,7 +130,7 @@ function logDuitkuError(input: {
 }
 
 export async function POST(request: Request) {
-  console.time("create-transaction");
+  const startedAt = Date.now();
 
   try {
     const body =
@@ -275,7 +275,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.timeLog("create-transaction", "after request validation");
+    console.log("[TIMING] validation:", Date.now() - startedAt, "ms");
 
     const existingOrder = await prisma.order.findUnique({
       where: {
@@ -361,7 +361,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.timeLog("create-transaction", "after database operations");
+    console.log("[TIMING] database:", Date.now() - startedAt, "ms");
 
     if (!existingOrder) {
       await sendAdminOrderCreatedEmail({
@@ -437,7 +437,7 @@ export async function POST(request: Request) {
     console.log("DUITKU REQUEST URL:", `${config.baseUrl}/api/merchant/createInvoice`);
     console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
 
-    console.timeLog("create-transaction", "before calling Duitku API");
+    console.log("[TIMING] before_duitku:", Date.now() - startedAt, "ms");
 
     const duitkuResponse = await fetch(
       `${config.baseUrl}/api/merchant/createInvoice`,
@@ -456,7 +456,7 @@ export async function POST(request: Request) {
 
     const duitkuData = await readDuitkuResponse(duitkuResponse);
 
-    console.timeLog("create-transaction", "after Duitku API returns");
+    console.log("[TIMING] after_duitku:", Date.now() - startedAt, "ms");
 
     console.log("DUITKU STATUS:", duitkuResponse.status);
     console.log("DUITKU DATA:", duitkuData);
@@ -542,7 +542,6 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   } finally {
-    console.timeLog("create-transaction", "before returning response");
-    console.timeEnd("create-transaction");
+    console.log("[TIMING] response:", Date.now() - startedAt, "ms");
   }
 }
