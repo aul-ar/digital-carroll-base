@@ -10,19 +10,6 @@ import type { EWalletProvider } from "@/lib/duitku";
 import { saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
-interface DuitkuCreateTransactionResponse {
-  success: boolean;
-  code?: string;
-  message?: string;
-  detail?: string;
-  data?: {
-    reference?: string;
-    paymentUrl?: string;
-    vaNumber?: string;
-    qrString?: string;
-  };
-}
-
 interface CheckoutCustomer {
   fullName: string;
   email: string;
@@ -48,6 +35,24 @@ interface EWalletProviderOption {
   id: EWalletProvider;
   label: string;
 }
+
+interface PendingAutomaticPaymentPayload {
+  planId: string;
+  customerName: string;
+  customerEmail: string;
+  customerWhatsapp: string;
+  businessName?: string;
+  packageName: string;
+  packageDescription: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  ewalletProvider?: EWalletProvider;
+  invoiceId: string;
+  orderId: string;
+  notes?: string;
+}
+
+const pendingPaymentStorageKey = "digital-carroll-base:pending-payment";
 
 const ewalletProviderOptions: EWalletProviderOption[] = [
   { id: "ovo", label: "OVO" },
@@ -131,24 +136,6 @@ function isAutomaticPaymentActive(method: PaymentMethod) {
     method === "qris" ||
     method === "ewallet"
   );
-}
-
-function getDuitkuErrorMessage(code?: string, serverMessage?: string, detail?: string) {
-  if (code === "MISSING_DUITKU_ENV") {
-    return "Konfigurasi Duitku belum lengkap. Periksa Environment Variables di Vercel.";
-  }
-
-  if (code === "INVALID_PAYMENT_METHOD") {
-    return serverMessage || "Metode pembayaran ini belum aktif di Duitku Production.";
-  }
-
-  if (code === "DUITKU_REQUEST_FAILED") {
-    const baseMessage = "Duitku menolak transaksi. Periksa konfigurasi channel pembayaran atau signature.";
-
-    return detail ? `${baseMessage} Detail: ${detail}` : baseMessage;
-  }
-
-  return serverMessage || "Gagal menyiapkan transaksi Duitku. Silakan coba lagi.";
 }
 
 interface CheckoutClientProps {
@@ -310,67 +297,33 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     return invoice;
   }
 
-  async function handleAutomaticPayment(method: PaymentMethod) {
+  function handleAutomaticPayment(method: PaymentMethod) {
     setIsProcessing(true);
     const invoice = createPendingInvoice(method);
+    const pendingPayment: PendingAutomaticPaymentPayload = {
+      planId: checkoutPlan.id,
+      customerName: invoice.customerName,
+      customerEmail: invoice.customerEmail,
+      customerWhatsapp: invoice.customerWhatsapp,
+      businessName: invoice.businessName,
+      packageName: invoice.packageName,
+      packageDescription: invoice.packageDescription,
+      amount: invoice.total,
+      paymentMethod: invoice.paymentMethod,
+      ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
+      invoiceId: invoice.invoiceId,
+      orderId: invoice.orderId,
+      notes: invoice.notes,
+    };
 
     try {
-      const response = await fetch("/api/duitku/create-transaction", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId: checkoutPlan.id,
-          customerName: invoice.customerName,
-          customerEmail: invoice.customerEmail,
-          customerWhatsapp: invoice.customerWhatsapp,
-          businessName: invoice.businessName,
-          packageName: invoice.packageName,
-          packageDescription: invoice.packageDescription,
-          amount: invoice.total,
-          paymentMethod: invoice.paymentMethod,
-          ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
-          invoiceId: invoice.invoiceId,
-          orderId: invoice.orderId,
-          notes: invoice.notes,
-        }),
-      });
-
-      const transaction = (await response.json()) as DuitkuCreateTransactionResponse;
-
-      if (!response.ok || !transaction.success) {
-        setPaymentError(getDuitkuErrorMessage(transaction.code, transaction.message, transaction.detail));
-        setIsProcessing(false);
-        return;
-      }
-
-      const updatedInvoice = {
-        ...invoice,
-        provider: "duitku" as const,
-        providerReference: transaction.data?.reference,
-        providerPaymentUrl: transaction.data?.paymentUrl,
-        vaNumber: transaction.data?.vaNumber,
-        qrString: transaction.data?.qrString,
-        merchantOrderId: invoice.orderId,
-        paymentStatus: "pending" as const,
-      };
-
-      saveInvoice(updatedInvoice);
-
-      if (transaction.data?.paymentUrl) {
-        try {
-          const paymentUrl = new URL(transaction.data.paymentUrl);
-          window.location.assign(paymentUrl.toString());
-          return;
-        } catch {
-          setPaymentError("Transaksi berhasil dibuat, tetapi halaman pembayaran belum tersedia. Silakan buka invoice atau hubungi admin.");
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      router.push(`/payment/pending?invoiceId=${invoice.invoiceId}`);
+      window.sessionStorage.setItem(
+        pendingPaymentStorageKey,
+        JSON.stringify(pendingPayment)
+      );
+      router.push("/payment/processing");
     } catch {
-      setPaymentError(getDuitkuErrorMessage("UNKNOWN_ERROR"));
+      setPaymentError("Gagal menyiapkan data pembayaran. Silakan coba lagi.");
       setIsProcessing(false);
     }
   }

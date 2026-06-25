@@ -14,6 +14,7 @@ import { pricingPlans } from "@/data/pricing";
 import { createInvoiceExpiresAt, parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod } from "@prisma/client";
+import { after } from "next/server";
 
 type DuitkuErrorCode =
   | "MISSING_DUITKU_ENV"
@@ -462,9 +463,11 @@ export async function POST(request: Request) {
         logTiming("admin_email_skipped", {
           reason: "smtp_env_incomplete",
         });
+      } else {
+        logTiming("admin_email_queued");
       }
 
-      await sendAdminOrderCreatedEmail({
+      const adminEmailInput = {
         orderId: order.orderId,
         invoiceId: invoice.invoiceId,
         paymentId: paymentRecord.id,
@@ -475,11 +478,11 @@ export async function POST(request: Request) {
         paymentStatus: paymentRecord.status,
         invoiceStatus: invoice.status,
         createdAt: order.createdAt,
-      });
+      };
 
-      if (isSmtpEnvComplete) {
-        logTiming("admin_email_done");
-      }
+      after(async () => {
+        await sendAdminOrderCreatedEmail(adminEmailInput);
+      });
     } else {
       logTiming("admin_email_skipped", {
         reason: "existing_order",
