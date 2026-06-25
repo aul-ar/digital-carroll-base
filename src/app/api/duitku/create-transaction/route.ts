@@ -130,6 +130,8 @@ function logDuitkuError(input: {
 }
 
 export async function POST(request: Request) {
+  console.time("create-transaction");
+
   try {
     const body =
       (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
@@ -273,6 +275,8 @@ export async function POST(request: Request) {
       );
     }
 
+    console.timeLog("create-transaction", "after request validation");
+
     const existingOrder = await prisma.order.findUnique({
       where: {
         orderId: payload.orderId,
@@ -357,6 +361,8 @@ export async function POST(request: Request) {
       },
     });
 
+    console.timeLog("create-transaction", "after database operations");
+
     if (!existingOrder) {
       await sendAdminOrderCreatedEmail({
         orderId: order.orderId,
@@ -431,6 +437,8 @@ export async function POST(request: Request) {
     console.log("DUITKU REQUEST URL:", `${config.baseUrl}/api/merchant/createInvoice`);
     console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
 
+    console.timeLog("create-transaction", "before calling Duitku API");
+
     const duitkuResponse = await fetch(
       `${config.baseUrl}/api/merchant/createInvoice`,
       {
@@ -447,6 +455,8 @@ export async function POST(request: Request) {
     );
 
     const duitkuData = await readDuitkuResponse(duitkuResponse);
+
+    console.timeLog("create-transaction", "after Duitku API returns");
 
     console.log("DUITKU STATUS:", duitkuResponse.status);
     console.log("DUITKU DATA:", duitkuData);
@@ -531,5 +541,8 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
+  } finally {
+    console.timeLog("create-transaction", "before returning response");
+    console.timeEnd("create-transaction");
   }
 }
