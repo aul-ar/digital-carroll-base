@@ -132,8 +132,10 @@ function logDuitkuError(input: {
 export async function POST(request: Request) {
   const startedAt = Date.now();
   let previousTimingAt = startedAt;
+  let timingSequence = 0;
   const logTiming = (stage: string, extra?: Record<string, unknown>) => {
     const loggedAt = Date.now();
+    const seq = timingSequence + 1;
     const elapsedMs = loggedAt - startedAt;
     const deltaMs = loggedAt - previousTimingAt;
     const extraDetails = extra
@@ -143,6 +145,8 @@ export async function POST(request: Request) {
       : "";
     const message = [
       `[TIMING] ${stage}`,
+      `seq=${seq}`,
+      `stage=${stage}`,
       `route=create-transaction`,
       `timestamp=${new Date(loggedAt).toISOString()}`,
       `elapsedMs=${elapsedMs}`,
@@ -153,6 +157,7 @@ export async function POST(request: Request) {
       .join(" ");
 
     console.error(message);
+    timingSequence = seq;
     previousTimingAt = loggedAt;
   };
 
@@ -562,6 +567,8 @@ export async function POST(request: Request) {
       Boolean(duitkuData.paymentUrl);
 
     if (isSuccess) {
+      logTiming("provider_payment_update_start");
+
       await prisma.payment.update({
         where: {
           orderIdRef: order.id,
@@ -574,6 +581,8 @@ export async function POST(request: Request) {
           qrString: duitkuData.qrString,
         },
       });
+
+      logTiming("provider_payment_update_done");
 
       logTiming("response_success", {
         environment: "production",
