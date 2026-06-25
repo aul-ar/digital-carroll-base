@@ -13,7 +13,7 @@ import { sendAdminOrderCreatedEmail } from "@/lib/admin-email";
 import { pricingPlans } from "@/data/pricing";
 import { createInvoiceExpiresAt, parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
-import { PaymentMethod } from "@prisma/client";
+import { PaymentMethod, Prisma, type Order } from "@prisma/client";
 import { after } from "next/server";
 
 type DuitkuErrorCode =
@@ -128,6 +128,13 @@ function logDuitkuError(input: {
   duitkuPaymentMethodCode?: string | null;
 }) {
   console.error("Duitku transaction error", input);
+}
+
+function isUniqueConstraintError(reason: unknown) {
+  return (
+    reason instanceof Prisma.PrismaClientKnownRequestError &&
+    reason.code === "P2002"
+  );
 }
 
 export async function POST(request: Request) {
@@ -361,96 +368,95 @@ export async function POST(request: Request) {
 
     logTiming("database_start");
 
-    const existingOrder = await prisma.order.findUnique({
-      where: {
-        orderId: payload.orderId,
-      },
-      select: {
-        id: true,
-      },
-    });
+    // Critical before Duitku: persist the order/payment skeleton so callbacks can
+    // resolve by merchantOrderId even if Duitku calls back very quickly.
+    const orderData = {
+      status: "WAITING_PAYMENT" as const,
+      customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      customerWhatsapp: payload.customerWhatsapp,
+      businessName: payload.businessName ?? null,
+      packageName: payload.packageName,
+      packageDescription: payload.packageDescription,
+      quantity: 1,
+      price: payload.amount,
+      subtotal: payload.amount,
+      total: payload.amount,
+      notes: payload.notes ?? null,
+    };
+    let isNewOrder = false;
+    let order: Order;
 
-    const order = await prisma.order.upsert({
-      where: {
-        orderId: payload.orderId,
-      },
-      update: {
-        status: "WAITING_PAYMENT",
-        customerName: payload.customerName,
-        customerEmail: payload.customerEmail,
-        customerWhatsapp: payload.customerWhatsapp,
-        businessName: payload.businessName ?? null,
-        packageName: payload.packageName,
-        packageDescription: payload.packageDescription,
-        quantity: 1,
-        price: payload.amount,
-        subtotal: payload.amount,
-        total: payload.amount,
-        notes: payload.notes ?? null,
-      },
-      create: {
-        orderId: payload.orderId,
-        status: "WAITING_PAYMENT",
-        customerName: payload.customerName,
-        customerEmail: payload.customerEmail,
-        customerWhatsapp: payload.customerWhatsapp,
-        businessName: payload.businessName ?? null,
-        packageName: payload.packageName,
-        packageDescription: payload.packageDescription,
-        quantity: 1,
-        price: payload.amount,
-        subtotal: payload.amount,
-        total: payload.amount,
-        notes: payload.notes ?? null,
-      },
-    });
+    try {
+      order = await prisma.order.create({
+        data: {
+          orderId: payload.orderId,
+          ...orderData,
+        },
+      });
+      isNewOrder = true;
+    } catch (reason) {
+      if (!isUniqueConstraintError(reason)) {
+        throw reason;
+      }
 
-    const invoice = await prisma.invoice.upsert({
-      where: {
-        invoiceId: payload.invoiceId,
-      },
-      update: {
-        status: "PENDING",
-        paymentMethod: prismaPaymentMethod,
-        paidAt: null,
-        expiresAt,
-      },
-      create: {
-        invoiceId: payload.invoiceId,
-        status: "PENDING",
-        paymentMethod: prismaPaymentMethod,
-        expiresAt,
-        orderIdRef: order.id,
-      },
-    });
+      order = await prisma.order.update({
+        where: {
+          orderId: payload.orderId,
+        },
+        data: orderData,
+      });
+    }
 
-    const paymentRecord = await prisma.payment.upsert({
-      where: {
-        orderIdRef: order.id,
-      },
-      update: {
-        status: "PENDING",
-        paymentMethod: prismaPaymentMethod,
-        provider: "duitku",
-        merchantOrderId,
-        amount: payload.amount,
-      },
-      create: {
-        status: "PENDING",
-        paymentMethod: prismaPaymentMethod,
-        provider: "duitku",
-        merchantOrderId,
-        amount: payload.amount,
-        orderIdRef: order.id,
-      },
-    });
+    // Critical before Duitku: invoice/payment writes are independent once order
+    // exists, so run them together while keeping both before createInvoice.
+    const [invoice, paymentRecord] = await Promise.all([
+      prisma.invoice.upsert({
+        where: {
+          invoiceId: payload.invoiceId,
+        },
+        update: {
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          paidAt: null,
+          expiresAt,
+        },
+        create: {
+          invoiceId: payload.invoiceId,
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          expiresAt,
+          orderIdRef: order.id,
+        },
+      }),
+      prisma.payment.upsert({
+        where: {
+          orderIdRef: order.id,
+        },
+        update: {
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          provider: "duitku",
+          merchantOrderId,
+          amount: payload.amount,
+        },
+        create: {
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          provider: "duitku",
+          merchantOrderId,
+          amount: payload.amount,
+          orderIdRef: order.id,
+        },
+      }),
+    ]);
 
     logTiming("database_done");
 
     logTiming("admin_email_start", {
-      existingOrder: Boolean(existingOrder),
+      isNewOrder,
     });
-    if (!existingOrder) {
+    if (isNewOrder) {
       const isSmtpEnvComplete = Boolean(
         process.env.SMTP_HOST &&
           process.env.SMTP_USER &&
@@ -480,6 +486,7 @@ export async function POST(request: Request) {
         createdAt: order.createdAt,
       };
 
+      // Non-critical after response: admin notification must not delay paymentUrl.
       after(async () => {
         await sendAdminOrderCreatedEmail(adminEmailInput);
       });
@@ -585,22 +592,33 @@ export async function POST(request: Request) {
       Boolean(duitkuData.paymentUrl);
 
     if (isSuccess) {
-      logTiming("provider_payment_update_start");
+      logTiming("provider_payment_update_queued");
 
-      await prisma.payment.update({
-        where: {
-          orderIdRef: order.id,
-        },
-        data: {
-          providerReference: duitkuData.reference,
-          providerPaymentUrl: duitkuData.paymentUrl,
-          paymentCode: duitkuPaymentMethodCode,
-          vaNumber: duitkuData.vaNumber,
-          qrString: duitkuData.qrString,
-        },
+      const providerPaymentUpdate = {
+        providerReference: duitkuData.reference,
+        providerPaymentUrl: duitkuData.paymentUrl,
+        paymentCode: duitkuPaymentMethodCode,
+        vaNumber: duitkuData.vaNumber,
+        qrString: duitkuData.qrString,
+      };
+
+      // Non-critical after response: callback lookup works via merchantOrderId
+      // already saved before Duitku, while this persists display/reference data.
+      after(async () => {
+        try {
+          await prisma.payment.update({
+            where: {
+              orderIdRef: order.id,
+            },
+            data: providerPaymentUpdate,
+          });
+        } catch (reason) {
+          console.error("Duitku provider payment update failed", {
+            merchantOrderId,
+            message: reason instanceof Error ? reason.message : "Unknown error",
+          });
+        }
       });
-
-      logTiming("provider_payment_update_done");
 
       flushTimingSummary("response_success", {
         environment: "production",
