@@ -3,6 +3,8 @@ import "server-only";
 import crypto from "node:crypto";
 import { PaymentMethod } from "@/lib/invoice";
 
+export type EWalletProvider = "ovo" | "shopeepay" | "linkaja";
+
 export interface DuitkuTransactionPayload {
   customerName: string;
   customerEmail: string;
@@ -15,6 +17,7 @@ export interface DuitkuTransactionPayload {
 
   amount: number;
   paymentMethod: PaymentMethod;
+  ewalletProvider?: EWalletProvider;
 
   invoiceId: string;
   orderId: string;
@@ -37,24 +40,72 @@ export function getDuitkuConfig() {
   };
 }
 
-export function mapPaymentMethodToDuitkuCode(
-  paymentMethod: PaymentMethod
+const ewalletProviders: readonly EWalletProvider[] = [
+  "ovo",
+  "shopeepay",
+  "linkaja",
+];
+
+export function isEWalletProvider(value: unknown): value is EWalletProvider {
+  return (
+    typeof value === "string" &&
+    (ewalletProviders as readonly string[]).includes(value)
+  );
+}
+
+function getPaymentCode(
+  ...codes: (string | undefined)[]
 ) {
-  const paymentMethodCodes: Partial<Record<PaymentMethod, string>> = {
-    virtual_account:
-      process.env.DUITKU_VA_PAYMENT_CODE || "BC",
+  for (const code of codes) {
+    const normalizedCode = code?.trim();
 
-    qris:
-      process.env.DUITKU_QRIS_PAYMENT_CODE || "",
+    if (normalizedCode) {
+      return normalizedCode;
+    }
+  }
 
-    ewallet:
-      process.env.DUITKU_EWALLET_PAYMENT_CODE || "",
-  };
+  return null;
+}
 
-  const paymentCode =
-    paymentMethodCodes[paymentMethod]?.trim();
-
-  return paymentCode || null;
+export function mapPaymentMethodToDuitkuCode(
+  paymentMethod: PaymentMethod,
+  ewalletProvider: EWalletProvider = "ovo"
+) {
+  switch (paymentMethod) {
+    case "virtual_account":
+      return getPaymentCode(
+        process.env.DUITKU_VA_PAYMENT_CODE,
+        "BC"
+      );
+    case "qris":
+      return getPaymentCode(
+        process.env.DUITKU_QRIS_PAYMENT_CODE,
+        "SQ"
+      );
+    case "ewallet":
+      switch (ewalletProvider) {
+        case "ovo":
+          return getPaymentCode(
+            process.env.DUITKU_OVO_PAYMENT_CODE,
+            process.env.DUITKU_EWALLET_PAYMENT_CODE,
+            "OV"
+          );
+        case "shopeepay":
+          return getPaymentCode(
+            process.env.DUITKU_SHOPEEPAY_PAYMENT_CODE,
+            "SA"
+          );
+        case "linkaja":
+          return getPaymentCode(
+            process.env.DUITKU_LINKAJA_PAYMENT_CODE,
+            "LF"
+          );
+        default:
+          return null;
+      }
+    default:
+      return null;
+  }
 }
 
 export function createMerchantOrderId(orderId: string) {
@@ -194,6 +245,18 @@ export function validateDuitkuRequestPayload(
       code: "INVALID_PAYMENT_METHOD",
       message:
         "Metode pembayaran belum aktif atau tidak dapat diproses melalui Duitku.",
+    };
+  }
+
+  if (
+    payload.paymentMethod === "ewallet" &&
+    !isEWalletProvider(payload.ewalletProvider ?? "ovo")
+  ) {
+    return {
+      valid: false,
+      code: "VALIDATION_ERROR",
+      message:
+        "Provider e-wallet harus salah satu dari ovo, shopeepay, atau linkaja.",
     };
   }
 

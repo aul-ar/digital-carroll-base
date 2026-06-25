@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
 import { pricingPlans } from "@/data/pricing";
 import { createInvoiceData, formatCurrency, parsePackagePrice, PaymentMethod } from "@/lib/invoice";
+import type { EWalletProvider } from "@/lib/duitku";
 import { saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
@@ -43,6 +44,17 @@ interface PaymentOption {
   }[];
 }
 
+interface EWalletProviderOption {
+  id: EWalletProvider;
+  label: string;
+}
+
+const ewalletProviderOptions: EWalletProviderOption[] = [
+  { id: "ovo", label: "OVO" },
+  { id: "shopeepay", label: "ShopeePay" },
+  { id: "linkaja", label: "LinkAja" },
+];
+
 const automaticPaymentOptions: PaymentOption[] = [
   {
     id: "virtual_account",
@@ -55,18 +67,19 @@ const automaticPaymentOptions: PaymentOption[] = [
     id: "qris",
     title: "QRIS All Payment",
     description:
-      "Belum aktif di Production. Gunakan Virtual Account atau pembayaran manual untuk saat ini.",
+      "Pembayaran melalui QRIS yang dapat digunakan oleh berbagai aplikasi seperti Mobile Banking, OVO, DANA, GoPay, dan ShopeePay.",
     icon: QrCode,
-    badgeLabel: "Belum aktif di Production",
-    disabled: true,
+    badgeLabel: "Duitku",
+    disabled: false,
   },
   {
     id: "ewallet",
     title: "E-Wallet",
-    description: "Belum aktif di Production. Gunakan Virtual Account atau E-Wallet Manual untuk saat ini.",
+    description:
+      "Bayar menggunakan OVO, ShopeePay, atau LinkAja melalui sistem pembayaran otomatis Duitku.",
     icon: Wallet,
-    badgeLabel: "Belum aktif di Production",
-    disabled: true,
+    badgeLabel: "Duitku",
+    disabled: false,
   },
 ];
 
@@ -113,7 +126,11 @@ function isManualPayment(method: PaymentMethod | "") {
 }
 
 function isAutomaticPaymentActive(method: PaymentMethod) {
-  return method === "virtual_account";
+  return (
+    method === "virtual_account" ||
+    method === "qris" ||
+    method === "ewallet"
+  );
 }
 
 function getDuitkuErrorMessage(code?: string, serverMessage?: string, detail?: string) {
@@ -147,6 +164,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
+  const [selectedEWalletProvider, setSelectedEWalletProvider] = useState<EWalletProvider>("ovo");
   const [error, setError] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -310,6 +328,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           packageDescription: invoice.packageDescription,
           amount: invoice.total,
           paymentMethod: invoice.paymentMethod,
+          ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
           invoiceId: invoice.invoiceId,
           orderId: invoice.orderId,
           notes: invoice.notes,
@@ -403,55 +422,96 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       : isManualPayment(option.id)
         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
+    const cardClassName = `w-full rounded-2xl border p-4 text-left transition ${
+      option.disabled
+        ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75 dark:border-slate-800 dark:bg-slate-900"
+        : selected
+        ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
+        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
+    }`;
 
     return (
-      <button
-        key={option.id}
-        type="button"
-        disabled={option.disabled}
-        onClick={() => {
-          setSelectedPaymentMethod(option.id);
-          setPaymentError("");
-        }}
-        className={`w-full rounded-2xl border p-4 text-left transition ${
-          option.disabled
-            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75 dark:border-slate-800 dark:bg-slate-900"
-            : selected
-            ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
-            : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
-        }`}
-      >
-        <div className="flex gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-              selected
-                ? "bg-blue-600 text-white"
-                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-            }`}
-          >
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-950 dark:text-white">{option.title}</h3>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${badgeClassName}`}>
-                {badgeLabel}
-              </span>
+      <div key={option.id} className={cardClassName}>
+        <button
+          type="button"
+          disabled={option.disabled}
+          onClick={() => {
+            setSelectedPaymentMethod(option.id);
+            setPaymentError("");
+          }}
+          className="w-full text-left disabled:cursor-not-allowed"
+        >
+          <div className="flex gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                selected
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{option.description}</p>
-            {option.details && (
-              <dl className="mt-3 grid gap-2 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-900">
-                {option.details.map((detail) => (
-                  <div key={detail.label} className="flex justify-between gap-3">
-                    <dt className="text-slate-500 dark:text-slate-400">{detail.label}</dt>
-                    <dd className="text-right font-bold text-slate-800 dark:text-slate-100">{detail.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-950 dark:text-white">{option.title}</h3>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${badgeClassName}`}>
+                  {badgeLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{option.description}</p>
+              {option.details && (
+                <dl className="mt-3 grid gap-2 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-900">
+                  {option.details.map((detail) => (
+                    <div key={detail.label} className="flex justify-between gap-3">
+                      <dt className="text-slate-500 dark:text-slate-400">{detail.label}</dt>
+                      <dd className="text-right font-bold text-slate-800 dark:text-slate-100">{detail.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+
+        {option.id === "ewallet" && selected && (
+          <fieldset className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <legend className="sr-only">Pilih provider e-wallet</legend>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Pilih aplikasi e-wallet yang ingin digunakan.
+            </p>
+            <div className="mt-3 grid gap-2">
+              {ewalletProviderOptions.map((provider) => {
+                const providerSelected = selectedEWalletProvider === provider.id;
+
+                return (
+                  <label
+                    key={provider.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                      providerSelected
+                        ? "border-blue-500 bg-white text-blue-700 dark:bg-slate-950 dark:text-blue-300"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="ewalletProvider"
+                      value={provider.id}
+                      checked={providerSelected}
+                      onChange={() => {
+                        setSelectedPaymentMethod("ewallet");
+                        setSelectedEWalletProvider(provider.id);
+                        setPaymentError("");
+                      }}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                    <span>{provider.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+      </div>
     );
   }
 

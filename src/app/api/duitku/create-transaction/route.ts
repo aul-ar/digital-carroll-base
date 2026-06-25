@@ -2,7 +2,9 @@ import {
   buildDuitkuCreateInvoiceSignature,
   createMerchantOrderId,
   DuitkuTransactionPayload,
+  EWalletProvider,
   getDuitkuConfig,
+  isEWalletProvider,
   mapPaymentMethodToDuitkuCode,
   normalizePhoneNumber,
   validateDuitkuRequestPayload,
@@ -44,6 +46,35 @@ function getSelectedPricingPlan(planId: unknown) {
   }
 
   return pricingPlans.find((plan) => plan.id === planId) ?? null;
+}
+
+function normalizeEWalletProvider(
+  paymentMethod: DuitkuTransactionPayload["paymentMethod"] | undefined,
+  ewalletProvider: unknown
+):
+  | { valid: true; provider?: EWalletProvider }
+  | { valid: false; message: string } {
+  if (paymentMethod !== "ewallet") {
+    return { valid: true };
+  }
+
+  if (
+    ewalletProvider === undefined ||
+    ewalletProvider === null ||
+    ewalletProvider === ""
+  ) {
+    return { valid: true, provider: "ovo" };
+  }
+
+  if (isEWalletProvider(ewalletProvider)) {
+    return { valid: true, provider: ewalletProvider };
+  }
+
+  return {
+    valid: false,
+    message:
+      "Provider e-wallet harus salah satu dari ovo, shopeepay, atau linkaja.",
+  };
 }
 
 function mapPaymentMethodToPrisma(
@@ -150,6 +181,32 @@ export async function POST(request: Request) {
       amount: selectedAmount,
     };
 
+    const ewalletProvider = normalizeEWalletProvider(
+      normalizedBody.paymentMethod,
+      normalizedBody.ewalletProvider
+    );
+
+    if (!ewalletProvider.valid) {
+      logDuitkuError({
+        code: "VALIDATION_ERROR",
+        statusMessage: ewalletProvider.message,
+        paymentMethod: normalizedBody.paymentMethod,
+      });
+
+      return Response.json(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          message: ewalletProvider.message,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (ewalletProvider.provider) {
+      normalizedBody.ewalletProvider = ewalletProvider.provider;
+    }
+
     const validation = validateDuitkuRequestPayload(normalizedBody);
 
     if (!validation.valid) {
@@ -192,7 +249,8 @@ export async function POST(request: Request) {
     const payload = normalizedBody as DuitkuTransactionPayloadWithMeta;
     const merchantOrderId = createMerchantOrderId(payload.orderId);
     const duitkuPaymentMethodCode = mapPaymentMethodToDuitkuCode(
-      payload.paymentMethod
+      payload.paymentMethod,
+      payload.ewalletProvider
     );
     const prismaPaymentMethod = mapPaymentMethodToPrisma(payload.paymentMethod);
     const expiresAt = createInvoiceExpiresAt();
