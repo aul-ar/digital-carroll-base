@@ -131,34 +131,46 @@ function logDuitkuError(input: {
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
-  let previousTimingAt = startedAt;
-  let timingSequence = 0;
-  const logTiming = (stage: string, extra?: Record<string, unknown>) => {
-    const loggedAt = Date.now();
-    const seq = timingSequence + 1;
-    const elapsedMs = loggedAt - startedAt;
-    const deltaMs = loggedAt - previousTimingAt;
-    const extraDetails = extra
-      ? Object.entries(extra)
-          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-          .join(" ")
-      : "";
-    const message = [
-      `[TIMING] ${stage}`,
-      `seq=${seq}`,
-      `stage=${stage}`,
-      `route=create-transaction`,
-      `timestamp=${new Date(loggedAt).toISOString()}`,
-      `elapsedMs=${elapsedMs}`,
-      `deltaMs=${deltaMs}`,
-      extraDetails,
-    ]
-      .filter(Boolean)
-      .join(" ");
+  type TimingEntry = {
+    seq: number;
+    stage: string;
+    elapsedMs: number;
+    deltaMs: number;
+    timestamp: string;
+    extra?: Record<string, unknown>;
+  };
 
-    console.error(message);
-    timingSequence = seq;
-    previousTimingAt = loggedAt;
+  const timings: TimingEntry[] = [];
+  let previousTimingAt = startedAt;
+
+  const logTiming = (stage: string, extra?: Record<string, unknown>) => {
+    const now = Date.now();
+
+    timings.push({
+      seq: timings.length + 1,
+      stage,
+      elapsedMs: now - startedAt,
+      deltaMs: now - previousTimingAt,
+      timestamp: new Date(now).toISOString(),
+      ...(extra ? { extra } : {}),
+    });
+
+    previousTimingAt = now;
+  };
+
+  const flushTimingSummary = (
+    finalStage: string,
+    extra?: Record<string, unknown>
+  ) => {
+    logTiming(finalStage, extra);
+
+    console.error("[TIMING SUMMARY] create-transaction", {
+      route: "create-transaction",
+      finalStage,
+      totalElapsedMs: Date.now() - startedAt,
+      environment: process.env.NODE_ENV,
+      timings,
+    });
   };
 
   logTiming("request_received");
@@ -171,16 +183,16 @@ export async function POST(request: Request) {
     const selectedPlan = getSelectedPricingPlan(body.planId);
 
     if (!selectedPlan) {
-      logTiming("plan_validation_failed", {
-        reason: "selected_plan_not_found",
-        paymentMethod: body.paymentMethod ?? null,
-      });
       logDuitkuError({
         code: "VALIDATION_ERROR",
         statusMessage: "Plan checkout tidak ditemukan di pricingPlans.",
         paymentMethod: body.paymentMethod,
       });
 
+      flushTimingSummary("plan_validation_failed", {
+        reason: "selected_plan_not_found",
+        paymentMethod: body.paymentMethod ?? null,
+      });
       return Response.json(
         {
           success: false,
@@ -195,16 +207,16 @@ export async function POST(request: Request) {
     const selectedAmount = parsePackagePrice(selectedPlan.price);
 
     if (selectedAmount <= 0) {
-      logTiming("plan_validation_failed", {
-        reason: "invalid_selected_amount",
-        planId: selectedPlan.id,
-      });
       logDuitkuError({
         code: "VALIDATION_ERROR",
         statusMessage: "Plan checkout tidak memiliki nominal pembayaran.",
         paymentMethod: body.paymentMethod,
       });
 
+      flushTimingSummary("plan_validation_failed", {
+        reason: "invalid_selected_amount",
+        planId: selectedPlan.id,
+      });
       return Response.json(
         {
           success: false,
@@ -231,15 +243,16 @@ export async function POST(request: Request) {
     );
 
     if (!ewalletProvider.valid) {
-      logTiming("ewallet_provider_validation_failed", {
-        paymentMethod: normalizedBody.paymentMethod ?? null,
-      });
       logDuitkuError({
         code: "VALIDATION_ERROR",
         statusMessage: ewalletProvider.message,
         paymentMethod: normalizedBody.paymentMethod,
       });
 
+      flushTimingSummary("ewallet_provider_validation_failed", {
+        paymentMethod: normalizedBody.paymentMethod ?? null,
+        message: ewalletProvider.message,
+      });
       return Response.json(
         {
           success: false,
@@ -262,16 +275,17 @@ export async function POST(request: Request) {
           ? "INVALID_PAYMENT_METHOD"
           : "VALIDATION_ERROR";
 
-      logTiming("payload_validation_failed", {
-        code,
-        paymentMethod: normalizedBody.paymentMethod ?? null,
-      });
       logDuitkuError({
         code,
         statusMessage: validation.message,
         paymentMethod: normalizedBody.paymentMethod,
       });
 
+      flushTimingSummary("payload_validation_failed", {
+        code,
+        message: validation.message,
+        paymentMethod: normalizedBody.paymentMethod ?? null,
+      });
       return Response.json(
         {
           success: false,
@@ -287,12 +301,13 @@ export async function POST(request: Request) {
     const config = getDuitkuConfig();
 
     if (!config.merchantCode || !config.apiKey) {
-      logTiming("config_failed", {
+      logDuitkuError({ code: "MISSING_DUITKU_ENV" });
+
+      flushTimingSummary("config_failed", {
+        reason: "missing_duitku_config",
         merchantCodeConfigured: Boolean(config.merchantCode),
         apiKeyConfigured: Boolean(config.apiKey),
       });
-      logDuitkuError({ code: "MISSING_DUITKU_ENV" });
-
       return Response.json(
         {
           success: false,
@@ -315,11 +330,6 @@ export async function POST(request: Request) {
     const expiresAt = createInvoiceExpiresAt();
 
     if (!duitkuPaymentMethodCode) {
-      logTiming("payment_code_failed", {
-        paymentMethod: payload.paymentMethod,
-        ewalletProvider: payload.ewalletProvider ?? null,
-        duitkuPaymentMethodCode,
-      });
       logDuitkuError({
         code: "INVALID_PAYMENT_METHOD",
         merchantOrderId,
@@ -327,6 +337,11 @@ export async function POST(request: Request) {
         duitkuPaymentMethodCode,
       });
 
+      flushTimingSummary("payment_code_failed", {
+        paymentMethod: payload.paymentMethod,
+        ewalletProvider: payload.ewalletProvider ?? null,
+        duitkuPaymentMethodCode,
+      });
       return Response.json(
         {
           success: false,
@@ -472,7 +487,7 @@ export async function POST(request: Request) {
     }
 
     if (config.mockEnabled) {
-      logTiming("response_success", {
+      flushTimingSummary("response_success", {
         environment: "mock",
       });
       return Response.json({
@@ -584,7 +599,7 @@ export async function POST(request: Request) {
 
       logTiming("provider_payment_update_done");
 
-      logTiming("response_success", {
+      flushTimingSummary("response_success", {
         environment: "production",
       });
       return Response.json({
@@ -623,9 +638,9 @@ export async function POST(request: Request) {
       duitkuPaymentMethodCode,
     });
 
-    logTiming("response_failed", {
+    flushTimingSummary("response_failed", {
       httpStatus: duitkuResponse.status,
-      statusCode: duitkuData.statusCode,
+      statusCode: duitkuData.statusCode ?? null,
       statusMessage: duitkuData.statusMessage ?? duitkuData.Message ?? null,
     });
     return Response.json(
@@ -644,8 +659,8 @@ export async function POST(request: Request) {
       statusMessage: reason instanceof Error ? reason.message : "Unknown error",
     });
 
-    logTiming("response_error", {
-      message: reason instanceof Error ? reason.message : "Unknown error",
+    flushTimingSummary("response_error", {
+      message: reason instanceof Error ? reason.message : String(reason),
     });
     return Response.json(
       {
