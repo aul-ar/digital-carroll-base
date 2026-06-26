@@ -1251,9 +1251,11 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     isAutomaticPaymentActive(selectedPaymentMethod) &&
     hasRequiredAutomaticPaymentFields
       ? preparedPaymentStatus === "pending"
-        ? "Menyiapkan pembayaran otomatis..."
+        ? "Sedang menyiapkan pembayaran agar proses lebih cepat..."
         : preparedPaymentStatus === "ready"
           ? "Pembayaran siap. Anda akan diarahkan lebih cepat."
+          : preparedPaymentStatus === "failed"
+            ? "Pembayaran akan diproses setelah Anda klik lanjut."
           : ""
       : "";
 
@@ -1366,7 +1368,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           )}
 
           {automaticPreparationMessage && (
-            <p className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/25 dark:text-blue-300">
+            <p className="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400">
               {automaticPreparationMessage}
             </p>
           )}
