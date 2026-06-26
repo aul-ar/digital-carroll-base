@@ -119,6 +119,23 @@ function getSafeStatusMessage(response: DuitkuCreateInvoiceResponse) {
   );
 }
 
+function isDuitkuDebugLogsEnabled() {
+  return process.env.DUITKU_DEBUG_LOGS === "true";
+}
+
+function redactSensitiveLogText(value: string | null | undefined) {
+  if (!value) {
+    return value ?? null;
+  }
+
+  return value
+    .replace(
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+      "[redacted-email]"
+    )
+    .replace(/\+?\d[\d\s().-]{7,}\d/g, "[redacted-phone]");
+}
+
 function logDuitkuError(input: {
   code: DuitkuErrorCode;
   httpStatus?: number;
@@ -127,7 +144,10 @@ function logDuitkuError(input: {
   paymentMethod?: string;
   duitkuPaymentMethodCode?: string | null;
 }) {
-  console.error("Duitku transaction error", input);
+  console.error("Duitku transaction error", {
+    ...input,
+    statusMessage: redactSensitiveLogText(input.statusMessage),
+  });
 }
 
 function isUniqueConstraintError(reason: unknown) {
@@ -556,7 +576,20 @@ export async function POST(request: Request) {
     };
 
     console.log("DUITKU REQUEST URL:", `${config.baseUrl}/api/merchant/createInvoice`);
-    console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
+    if (isDuitkuDebugLogsEnabled()) {
+      console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
+    } else {
+      console.info("DUITKU REQUEST SUMMARY:", {
+        paymentMethod: duitkuPayload.paymentMethod,
+        merchantOrderId: duitkuPayload.merchantOrderId,
+        invoiceId: duitkuPayload.additionalParam,
+        itemCount: duitkuPayload.itemDetails.length,
+        expiryPeriod: duitkuPayload.expiryPeriod,
+        hasCustomerEmail: Boolean(duitkuPayload.email),
+        hasCustomerName: Boolean(duitkuPayload.customerVaName),
+        hasPhoneNumber: Boolean(duitkuPayload.phoneNumber),
+      });
+    }
 
     logTiming("duitku_request_start");
 
@@ -580,11 +613,27 @@ export async function POST(request: Request) {
     logTiming("duitku_request_done", {
       httpStatus: duitkuResponse.status,
       statusCode: duitkuData.statusCode,
-      statusMessage: duitkuData.statusMessage ?? duitkuData.Message ?? null,
+      statusMessage: redactSensitiveLogText(
+        duitkuData.statusMessage ?? duitkuData.Message
+      ),
     });
 
     console.log("DUITKU STATUS:", duitkuResponse.status);
-    console.log("DUITKU DATA:", duitkuData);
+    if (isDuitkuDebugLogsEnabled()) {
+      console.log("DUITKU DATA:", duitkuData);
+    } else {
+      console.info("DUITKU RESPONSE SUMMARY:", {
+        statusCode: duitkuData.statusCode ?? null,
+        statusMessage: redactSensitiveLogText(
+          duitkuData.statusMessage ?? duitkuData.Message
+        ),
+        hasReference: Boolean(duitkuData.reference),
+        hasPaymentUrl: Boolean(duitkuData.paymentUrl),
+        hasVaNumber: Boolean(duitkuData.vaNumber),
+        hasQrString: Boolean(duitkuData.qrString),
+        hasAmount: duitkuData.amount !== undefined,
+      });
+    }
 
     const isSuccess =
       duitkuResponse.ok &&
@@ -662,7 +711,9 @@ export async function POST(request: Request) {
     flushTimingSummary("response_failed", {
       httpStatus: duitkuResponse.status,
       statusCode: duitkuData.statusCode ?? null,
-      statusMessage: duitkuData.statusMessage ?? duitkuData.Message ?? null,
+      statusMessage: redactSensitiveLogText(
+        duitkuData.statusMessage ?? duitkuData.Message
+      ),
     });
     return Response.json(
       {
