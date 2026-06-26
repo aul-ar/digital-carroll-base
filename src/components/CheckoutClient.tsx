@@ -71,7 +71,6 @@ type PreparedPaymentStatus = "pending" | "ready" | "failed";
 
 interface PreparedPayment {
   payloadHash: string;
-  payload: PendingAutomaticPaymentPayload;
   status: PreparedPaymentStatus;
   paymentUrl?: string;
   response?: DuitkuCreateTransactionResponse;
@@ -82,6 +81,7 @@ interface PreparedPayment {
 const pendingPaymentStorageKey = "digital-carroll-base:pending-payment";
 const preparedPaymentStorageKey = "digital-carroll-base:prepared-payment";
 const preparedPaymentMaxAgeMs = 8 * 60 * 1000;
+const preparedPaymentPendingReuseMs = 2 * 60 * 1000;
 const backgroundPrepareDebounceMs = 800;
 const paymentMethods: readonly PaymentMethod[] = [
   "virtual_account",
@@ -234,21 +234,27 @@ function parsePendingAutomaticPaymentPayload(
   };
 }
 
+function normalizeStringForPayloadHash(value: string | undefined) {
+  return (value ?? "").trim();
+}
+
 function getPendingPaymentPayloadHash(payload: PendingAutomaticPaymentPayload) {
   return JSON.stringify({
-    planId: payload.planId,
-    customerName: payload.customerName,
-    customerEmail: payload.customerEmail,
-    customerWhatsapp: payload.customerWhatsapp,
-    businessName: payload.businessName ?? "",
-    packageName: payload.packageName,
-    packageDescription: payload.packageDescription,
-    amount: payload.amount,
+    planId: normalizeStringForPayloadHash(payload.planId),
+    customerName: normalizeStringForPayloadHash(payload.customerName),
+    customerEmail: normalizeStringForPayloadHash(payload.customerEmail).toLowerCase(),
+    customerWhatsapp: normalizeStringForPayloadHash(payload.customerWhatsapp),
+    businessName: normalizeStringForPayloadHash(payload.businessName),
+    packageName: normalizeStringForPayloadHash(payload.packageName),
+    packageDescription: normalizeStringForPayloadHash(
+      payload.packageDescription
+    ),
+    amount: Number(payload.amount),
     paymentMethod: payload.paymentMethod,
     ewalletProvider: payload.ewalletProvider ?? null,
-    invoiceId: payload.invoiceId,
-    orderId: payload.orderId,
-    notes: payload.notes ?? "",
+    invoiceId: normalizeStringForPayloadHash(payload.invoiceId),
+    orderId: normalizeStringForPayloadHash(payload.orderId),
+    notes: normalizeStringForPayloadHash(payload.notes),
   });
 }
 
@@ -317,6 +323,37 @@ function parseDuitkuCreateTransactionResponse(
   return transaction;
 }
 
+function readPendingPaymentPayload() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(pendingPaymentStorageKey);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+    return parsePendingAutomaticPaymentPayload(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function writePendingPaymentPayload(payload: PendingAutomaticPaymentPayload) {
+  try {
+    window.sessionStorage.setItem(
+      pendingPaymentStorageKey,
+      JSON.stringify(payload)
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function readPreparedPayment() {
   if (typeof window === "undefined") {
     return null;
@@ -340,12 +377,6 @@ function readPreparedPayment() {
       return null;
     }
 
-    const payload = parsePendingAutomaticPaymentPayload(parsed.payload);
-
-    if (!payload) {
-      return null;
-    }
-
     if (Date.now() - parsed.createdAt > preparedPaymentMaxAgeMs) {
       window.sessionStorage.removeItem(preparedPaymentStorageKey);
       return null;
@@ -353,7 +384,6 @@ function readPreparedPayment() {
 
     return {
       payloadHash: parsed.payloadHash,
-      payload,
       status: parsed.status,
       paymentUrl: optionalString(parsed.paymentUrl),
       response: parseDuitkuCreateTransactionResponse(parsed.response),
@@ -420,6 +450,15 @@ function getPaymentRedirectUrl(transaction: DuitkuCreateTransactionResponse) {
   }
 
   return null;
+}
+
+function getPreparedPaymentUrl(preparedPayment: PreparedPayment) {
+  return (
+    preparedPayment.paymentUrl ??
+    (preparedPayment.response
+      ? getPaymentRedirectUrl(preparedPayment.response)
+      : null)
+  );
 }
 
 function updateStoredPreparedInvoice(
@@ -491,8 +530,11 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const [preparedPaymentStatus, setPreparedPaymentStatus] = useState<
     PreparedPaymentStatus | "idle"
   >("idle");
-  const backgroundPrepareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const backgroundRequestHashRef = useRef<string | null>(null);
+  const lastPreparedPayloadHashRef = useRef<string | null>(null);
+  const preparingPayloadHashRef = useRef<string | null>(null);
+  const isPreparingRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
 
   const selectedAmount = selectedPlan ? parsePackagePrice(selectedPlan.price) : 0;
   const hasCheckoutAmount = selectedAmount > 0;
@@ -595,47 +637,120 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     ]
   );
 
-  const prepareAutomaticPayment = useCallback(
-    async (method: PaymentMethod) => {
-      const existingPreparedPayment = readPreparedPayment();
+  const getOrCreateAutomaticPendingPayment = useCallback(
+    (method: PaymentMethod) => {
+      const existingPendingPayment = readPendingPaymentPayload();
 
       if (
-        existingPreparedPayment &&
-        isPreparedPaymentForCurrentCheckout(existingPreparedPayment.payload, method)
+        existingPendingPayment &&
+        isPreparedPaymentForCurrentCheckout(existingPendingPayment, method)
       ) {
-        setPreparedPaymentStatus(existingPreparedPayment.status);
-        return;
+        return existingPendingPayment;
       }
 
+      const invoice = createPendingInvoice(method);
+      const pendingPayment = buildPendingPaymentPayload(invoice, method);
+      writePendingPaymentPayload(pendingPayment);
+      return pendingPayment;
+    },
+    [
+      buildPendingPaymentPayload,
+      createPendingInvoice,
+      isPreparedPaymentForCurrentCheckout,
+    ]
+  );
+
+  const prepareAutomaticPayment = useCallback(
+    async (method: PaymentMethod) => {
       let payloadHash: string | null = null;
       let pendingPayment: PendingAutomaticPaymentPayload | null = null;
 
       try {
-        const invoice = createPendingInvoice(method);
-        pendingPayment = buildPendingPaymentPayload(invoice, method);
+        pendingPayment = getOrCreateAutomaticPendingPayment(method);
         payloadHash = getPendingPaymentPayloadHash(pendingPayment);
 
-        if (backgroundRequestHashRef.current === payloadHash) {
+        const existingPreparedPayment = readPreparedPayment();
+        const existingPreparedPaymentUrl = existingPreparedPayment
+          ? getPreparedPaymentUrl(existingPreparedPayment)
+          : null;
+
+        if (
+          existingPreparedPayment?.payloadHash === payloadHash &&
+          existingPreparedPayment.status === "pending" &&
+          Date.now() - existingPreparedPayment.createdAt <
+            preparedPaymentPendingReuseMs
+        ) {
+          console.info("[PAYMENT PREP] skipped_existing_pending", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+          });
           setPreparedPaymentStatus("pending");
           return;
         }
 
-        backgroundRequestHashRef.current = payloadHash;
+        if (
+          existingPreparedPayment?.payloadHash === payloadHash &&
+          existingPreparedPayment.status === "ready" &&
+          existingPreparedPaymentUrl
+        ) {
+          console.info("[PAYMENT PREP] skipped_existing_ready", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+          });
+          setPreparedPaymentStatus("ready");
+          return;
+        }
+
+        if (
+          isPreparingRef.current &&
+          preparingPayloadHashRef.current === payloadHash
+        ) {
+          console.info("[PAYMENT PREP] skipped_existing_pending", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+          });
+          setPreparedPaymentStatus("pending");
+          return;
+        }
+
+        if (
+          lastPreparedPayloadHashRef.current === payloadHash &&
+          existingPreparedPayment
+        ) {
+          return;
+        }
+
+        lastPreparedPayloadHashRef.current = payloadHash;
+        preparingPayloadHashRef.current = payloadHash;
+        isPreparingRef.current = true;
 
         const pendingPreparedPayment: PreparedPayment = {
           payloadHash,
-          payload: pendingPayment,
           status: "pending",
           createdAt: Date.now(),
         };
 
+        writePendingPaymentPayload(pendingPayment);
         writePreparedPayment(pendingPreparedPayment);
         setPreparedPaymentStatus("pending");
+
+        console.info("[PAYMENT PREP] started", {
+          payloadHash,
+          orderId: pendingPayment.orderId,
+          invoiceId: pendingPayment.invoiceId,
+        });
+
+        const abortController = new AbortController();
+        activeAbortControllerRef.current = abortController;
 
         const response = await fetch("/api/duitku/create-transaction", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(pendingPayment),
+          signal: abortController.signal,
         });
         const transaction = await readTransactionResponse(response);
 
@@ -646,14 +761,22 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             transaction.detail
           );
 
-          if (backgroundRequestHashRef.current === payloadHash) {
+          if (preparingPayloadHashRef.current === payloadHash) {
             writePreparedPayment({
               ...pendingPreparedPayment,
               status: "failed",
+              response: transaction,
               error: errorMessage,
               createdAt: Date.now(),
             });
           }
+
+          console.info("[PAYMENT PREP] failed", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            code: transaction.code,
+          });
 
           if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
             setPreparedPaymentStatus("failed");
@@ -668,7 +791,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           const errorMessage =
             "Transaksi berhasil dibuat, tetapi halaman pembayaran Duitku belum tersedia.";
 
-          if (backgroundRequestHashRef.current === payloadHash) {
+          if (preparingPayloadHashRef.current === payloadHash) {
             writePreparedPayment({
               ...pendingPreparedPayment,
               status: "failed",
@@ -678,6 +801,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             });
           }
 
+          console.info("[PAYMENT PREP] failed", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            reason: "missing_payment_url",
+          });
+
           if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
             setPreparedPaymentStatus("failed");
           }
@@ -685,7 +815,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           return;
         }
 
-        if (backgroundRequestHashRef.current === payloadHash) {
+        if (preparingPayloadHashRef.current === payloadHash) {
           updateStoredPreparedInvoice(pendingPayment, transaction, paymentUrl);
 
           writePreparedPayment({
@@ -697,21 +827,33 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           });
         }
 
+        console.info("[PAYMENT PREP] ready", {
+          payloadHash,
+          orderId: pendingPayment.orderId,
+          invoiceId: pendingPayment.invoiceId,
+        });
+
         if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
           setPreparedPaymentStatus("ready");
         }
-      } catch {
+      } catch (reason) {
         if (
           payloadHash &&
           pendingPayment &&
-          backgroundRequestHashRef.current === payloadHash
+          preparingPayloadHashRef.current === payloadHash
         ) {
           writePreparedPayment({
             payloadHash,
-            payload: pendingPayment,
             status: "failed",
             error: "Terjadi kendala jaringan saat menghubungkan ke Duitku.",
             createdAt: Date.now(),
+          });
+
+          console.info("[PAYMENT PREP] failed", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            reason: reason instanceof Error ? reason.message : "network_error",
           });
 
           if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
@@ -719,22 +861,26 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           }
         }
       } finally {
-        if (backgroundRequestHashRef.current === payloadHash) {
-          backgroundRequestHashRef.current = null;
+        if (preparingPayloadHashRef.current === payloadHash) {
+          preparingPayloadHashRef.current = null;
+          isPreparingRef.current = false;
+        }
+
+        if (activeAbortControllerRef.current?.signal.aborted === false) {
+          activeAbortControllerRef.current = null;
         }
       }
     },
     [
-      buildPendingPaymentPayload,
-      createPendingInvoice,
+      getOrCreateAutomaticPendingPayment,
       isPreparedPaymentForCurrentCheckout,
     ]
   );
 
   useEffect(() => {
-    if (backgroundPrepareTimeoutRef.current) {
-      clearTimeout(backgroundPrepareTimeoutRef.current);
-      backgroundPrepareTimeoutRef.current = null;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
     if (
@@ -749,14 +895,14 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
     const method = selectedPaymentMethod;
 
-    backgroundPrepareTimeoutRef.current = setTimeout(() => {
+    debounceTimerRef.current = setTimeout(() => {
       void prepareAutomaticPayment(method);
     }, backgroundPrepareDebounceMs);
 
     return () => {
-      if (backgroundPrepareTimeoutRef.current) {
-        clearTimeout(backgroundPrepareTimeoutRef.current);
-        backgroundPrepareTimeoutRef.current = null;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
     };
   }, [
@@ -890,45 +1036,32 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
   function handleAutomaticPayment(method: PaymentMethod) {
     setIsProcessing(true);
-    const preparedPayment = readPreparedPayment();
 
-    if (
-      preparedPayment &&
-      isPreparedPaymentForCurrentCheckout(preparedPayment.payload, method)
-    ) {
-      const paymentUrl =
-        preparedPayment.paymentUrl ??
-        (preparedPayment.response
-          ? getPaymentRedirectUrl(preparedPayment.response)
-          : null);
-
-      if (preparedPayment.status === "ready" && paymentUrl) {
-        window.location.assign(paymentUrl);
-        return;
-      }
-
-      try {
-        window.sessionStorage.setItem(
-          pendingPaymentStorageKey,
-          JSON.stringify(preparedPayment.payload)
-        );
-        router.push("/payment/processing");
-      } catch {
-        setPaymentError("Gagal menyiapkan data pembayaran. Silakan coba lagi.");
-        setIsProcessing(false);
-      }
-
-      return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
     try {
-      const invoice = createPendingInvoice(method);
-      const pendingPayment = buildPendingPaymentPayload(invoice, method);
+      const pendingPayment = getOrCreateAutomaticPendingPayment(method);
+      const payloadHash = getPendingPaymentPayloadHash(pendingPayment);
+      const preparedPayment = readPreparedPayment();
 
-      window.sessionStorage.setItem(
-        pendingPaymentStorageKey,
-        JSON.stringify(pendingPayment)
-      );
+      if (preparedPayment?.payloadHash === payloadHash) {
+        const paymentUrl = getPreparedPaymentUrl(preparedPayment);
+
+        if (preparedPayment.status === "ready" && paymentUrl) {
+          window.location.assign(paymentUrl);
+          return;
+        }
+      }
+
+      if (!writePendingPaymentPayload(pendingPayment)) {
+        setPaymentError("Gagal menyiapkan data pembayaran. Silakan coba lagi.");
+        setIsProcessing(false);
+        return;
+      }
+
       router.push("/payment/processing");
     } catch {
       setPaymentError("Gagal menyiapkan data pembayaran. Silakan coba lagi.");
