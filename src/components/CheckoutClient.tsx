@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
 import { pricingPlans } from "@/data/pricing";
-import { createInvoiceData, formatCurrency, parsePackagePrice, PaymentMethod } from "@/lib/invoice";
+import { createInvoiceData, formatCurrency, parsePackagePrice, PaymentMethod, type Invoice } from "@/lib/invoice";
 import type { EWalletProvider } from "@/lib/duitku";
-import { saveInvoice } from "@/lib/invoice-storage";
+import { getStoredInvoice, saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
 interface CheckoutCustomer {
@@ -52,7 +52,49 @@ interface PendingAutomaticPaymentPayload {
   notes?: string;
 }
 
+interface DuitkuCreateTransactionResponse {
+  success: boolean;
+  code?: string;
+  message?: string;
+  detail?: string;
+  paymentUrl?: string | null;
+  redirectUrl?: string | null;
+  data?: {
+    reference?: string;
+    paymentUrl?: string | null;
+    vaNumber?: string;
+    qrString?: string;
+  };
+}
+
+type PreparedPaymentStatus = "pending" | "ready" | "failed";
+
+interface PreparedPayment {
+  payloadHash: string;
+  payload: PendingAutomaticPaymentPayload;
+  status: PreparedPaymentStatus;
+  paymentUrl?: string;
+  response?: DuitkuCreateTransactionResponse;
+  error?: string;
+  createdAt: number;
+}
+
 const pendingPaymentStorageKey = "digital-carroll-base:pending-payment";
+const preparedPaymentStorageKey = "digital-carroll-base:prepared-payment";
+const preparedPaymentMaxAgeMs = 8 * 60 * 1000;
+const backgroundPrepareDebounceMs = 800;
+const paymentMethods: readonly PaymentMethod[] = [
+  "virtual_account",
+  "qris",
+  "ewallet",
+  "bank_transfer_manual",
+  "ewallet_manual",
+];
+const ewalletProviders: readonly EWalletProvider[] = [
+  "ovo",
+  "shopeepay",
+  "linkaja",
+];
 
 const ewalletProviderOptions: EWalletProviderOption[] = [
   { id: "ovo", label: "OVO" },
@@ -126,11 +168,301 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isPaymentMethod(value: unknown): value is PaymentMethod {
+  return (
+    typeof value === "string" &&
+    (paymentMethods as readonly string[]).includes(value)
+  );
+}
+
+function isEWalletProvider(value: unknown): value is EWalletProvider {
+  return (
+    typeof value === "string" &&
+    (ewalletProviders as readonly string[]).includes(value)
+  );
+}
+
+function isPreparedPaymentStatus(value: unknown): value is PreparedPaymentStatus {
+  return value === "pending" || value === "ready" || value === "failed";
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function parsePendingAutomaticPaymentPayload(
+  value: unknown
+): PendingAutomaticPaymentPayload | null {
+  if (!isRecord(value) || !isPaymentMethod(value.paymentMethod)) {
+    return null;
+  }
+
+  if (
+    typeof value.planId !== "string" ||
+    typeof value.customerName !== "string" ||
+    typeof value.customerEmail !== "string" ||
+    typeof value.customerWhatsapp !== "string" ||
+    typeof value.packageName !== "string" ||
+    typeof value.packageDescription !== "string" ||
+    typeof value.amount !== "number" ||
+    typeof value.invoiceId !== "string" ||
+    typeof value.orderId !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    planId: value.planId,
+    customerName: value.customerName,
+    customerEmail: value.customerEmail,
+    customerWhatsapp: value.customerWhatsapp,
+    businessName: optionalString(value.businessName),
+    packageName: value.packageName,
+    packageDescription: value.packageDescription,
+    amount: value.amount,
+    paymentMethod: value.paymentMethod,
+    ...(isEWalletProvider(value.ewalletProvider)
+      ? { ewalletProvider: value.ewalletProvider }
+      : {}),
+    invoiceId: value.invoiceId,
+    orderId: value.orderId,
+    notes: optionalString(value.notes),
+  };
+}
+
+function getPendingPaymentPayloadHash(payload: PendingAutomaticPaymentPayload) {
+  return JSON.stringify({
+    planId: payload.planId,
+    customerName: payload.customerName,
+    customerEmail: payload.customerEmail,
+    customerWhatsapp: payload.customerWhatsapp,
+    businessName: payload.businessName ?? "",
+    packageName: payload.packageName,
+    packageDescription: payload.packageDescription,
+    amount: payload.amount,
+    paymentMethod: payload.paymentMethod,
+    ewalletProvider: payload.ewalletProvider ?? null,
+    invoiceId: payload.invoiceId,
+    orderId: payload.orderId,
+    notes: payload.notes ?? "",
+  });
+}
+
+function parseDuitkuCreateTransactionResponse(
+  value: unknown
+): DuitkuCreateTransactionResponse | undefined {
+  if (!isRecord(value) || typeof value.success !== "boolean") {
+    return undefined;
+  }
+
+  const transaction: DuitkuCreateTransactionResponse = {
+    success: value.success,
+  };
+  const code = optionalString(value.code);
+  const message = optionalString(value.message);
+  const detail = optionalString(value.detail);
+  const paymentUrl = optionalString(value.paymentUrl);
+  const redirectUrl = optionalString(value.redirectUrl);
+
+  if (code !== undefined) {
+    transaction.code = code;
+  }
+
+  if (message !== undefined) {
+    transaction.message = message;
+  }
+
+  if (detail !== undefined) {
+    transaction.detail = detail;
+  }
+
+  if (paymentUrl !== undefined) {
+    transaction.paymentUrl = paymentUrl;
+  }
+
+  if (redirectUrl !== undefined) {
+    transaction.redirectUrl = redirectUrl;
+  }
+
+  if (isRecord(value.data)) {
+    const data: NonNullable<DuitkuCreateTransactionResponse["data"]> = {};
+    const reference = optionalString(value.data.reference);
+    const dataPaymentUrl = optionalString(value.data.paymentUrl);
+    const vaNumber = optionalString(value.data.vaNumber);
+    const qrString = optionalString(value.data.qrString);
+
+    if (reference !== undefined) {
+      data.reference = reference;
+    }
+
+    if (dataPaymentUrl !== undefined) {
+      data.paymentUrl = dataPaymentUrl;
+    }
+
+    if (vaNumber !== undefined) {
+      data.vaNumber = vaNumber;
+    }
+
+    if (qrString !== undefined) {
+      data.qrString = qrString;
+    }
+
+    transaction.data = data;
+  }
+
+  return transaction;
+}
+
+function readPreparedPayment() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(preparedPaymentStorageKey);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (
+      !isRecord(parsed) ||
+      typeof parsed.payloadHash !== "string" ||
+      !isPreparedPaymentStatus(parsed.status) ||
+      typeof parsed.createdAt !== "number"
+    ) {
+      return null;
+    }
+
+    const payload = parsePendingAutomaticPaymentPayload(parsed.payload);
+
+    if (!payload) {
+      return null;
+    }
+
+    if (Date.now() - parsed.createdAt > preparedPaymentMaxAgeMs) {
+      window.sessionStorage.removeItem(preparedPaymentStorageKey);
+      return null;
+    }
+
+    return {
+      payloadHash: parsed.payloadHash,
+      payload,
+      status: parsed.status,
+      paymentUrl: optionalString(parsed.paymentUrl),
+      response: parseDuitkuCreateTransactionResponse(parsed.response),
+      error: optionalString(parsed.error),
+      createdAt: parsed.createdAt,
+    } satisfies PreparedPayment;
+  } catch {
+    return null;
+  }
+}
+
+function writePreparedPayment(preparedPayment: PreparedPayment) {
+  try {
+    window.sessionStorage.setItem(
+      preparedPaymentStorageKey,
+      JSON.stringify(preparedPayment)
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getDuitkuErrorMessage(
+  code?: string,
+  serverMessage?: string,
+  detail?: string
+) {
+  if (code === "MISSING_DUITKU_ENV") {
+    return "Konfigurasi Duitku belum lengkap. Periksa Environment Variables di Vercel.";
+  }
+
+  if (code === "INVALID_PAYMENT_METHOD") {
+    return serverMessage || "Metode pembayaran ini belum aktif di Duitku Production.";
+  }
+
+  if (code === "DUITKU_REQUEST_FAILED") {
+    const baseMessage =
+      "Duitku menolak transaksi. Periksa konfigurasi channel pembayaran atau signature.";
+
+    return detail ? `${baseMessage} Detail: ${detail}` : baseMessage;
+  }
+
+  return serverMessage || "Gagal menyiapkan transaksi Duitku. Silakan coba lagi.";
+}
+
+function getPaymentRedirectUrl(transaction: DuitkuCreateTransactionResponse) {
+  const candidates = [
+    transaction.data?.paymentUrl,
+    transaction.paymentUrl,
+    transaction.redirectUrl,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" || !candidate.trim()) {
+      continue;
+    }
+
+    try {
+      return new URL(candidate, window.location.origin).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function updateStoredPreparedInvoice(
+  payload: PendingAutomaticPaymentPayload,
+  transaction: DuitkuCreateTransactionResponse,
+  paymentUrl: string
+) {
+  const invoice = getStoredInvoice(payload.invoiceId);
+
+  if (!invoice) {
+    return;
+  }
+
+  const updatedInvoice: Invoice = {
+    ...invoice,
+    provider: "duitku",
+    providerReference: transaction.data?.reference,
+    providerPaymentUrl: paymentUrl,
+    vaNumber: transaction.data?.vaNumber,
+    qrString: transaction.data?.qrString,
+    merchantOrderId: payload.orderId,
+    paymentStatus: "pending",
+  };
+
+  saveInvoice(updatedInvoice);
+}
+
+async function readTransactionResponse(response: Response) {
+  try {
+    return (await response.json()) as DuitkuCreateTransactionResponse;
+  } catch {
+    return {
+      success: false,
+      message: "Server tidak mengembalikan respons pembayaran yang valid.",
+    } satisfies DuitkuCreateTransactionResponse;
+  }
+}
+
 function isManualPayment(method: PaymentMethod | "") {
   return method === "bank_transfer_manual" || method === "ewallet_manual";
 }
 
-function isAutomaticPaymentActive(method: PaymentMethod) {
+function isAutomaticPaymentActive(method: PaymentMethod | ""): method is PaymentMethod {
   return (
     method === "virtual_account" ||
     method === "qris" ||
@@ -156,6 +488,284 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const [paymentError, setPaymentError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualInvoiceId, setManualInvoiceId] = useState("");
+  const [preparedPaymentStatus, setPreparedPaymentStatus] = useState<
+    PreparedPaymentStatus | "idle"
+  >("idle");
+  const backgroundPrepareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundRequestHashRef = useRef<string | null>(null);
+
+  const selectedAmount = selectedPlan ? parsePackagePrice(selectedPlan.price) : 0;
+  const hasCheckoutAmount = selectedAmount > 0;
+  const hasRequiredAutomaticPaymentFields = Boolean(
+    customer.fullName.trim() &&
+      customer.email.trim() &&
+      isValidEmail(customer.email) &&
+      customer.whatsapp.trim()
+  );
+
+  const createPendingInvoice = useCallback(
+    (method: PaymentMethod) => {
+      if (!selectedPlan) {
+        throw new Error("Checkout plan is not available.");
+      }
+
+      const invoice = createInvoiceData({
+        paymentMethod: method,
+        customerName: customer.fullName,
+        customerEmail: customer.email,
+        customerWhatsapp: customer.whatsapp,
+        businessName: customer.businessName,
+        packageName: selectedPlan.name,
+        packageDescription: selectedPlan.description,
+        packagePrice: selectedAmount,
+        notes: customer.notes,
+      });
+
+      saveInvoice(invoice);
+      return invoice;
+    },
+    [
+      customer.businessName,
+      customer.email,
+      customer.fullName,
+      customer.notes,
+      customer.whatsapp,
+      selectedAmount,
+      selectedPlan,
+    ]
+  );
+
+  const buildPendingPaymentPayload = useCallback(
+    (invoice: Invoice, method: PaymentMethod): PendingAutomaticPaymentPayload => {
+      if (!selectedPlan) {
+        throw new Error("Checkout plan is not available.");
+      }
+
+      return {
+        planId: selectedPlan.id,
+        customerName: invoice.customerName,
+        customerEmail: invoice.customerEmail,
+        customerWhatsapp: invoice.customerWhatsapp,
+        businessName: invoice.businessName,
+        packageName: invoice.packageName,
+        packageDescription: invoice.packageDescription,
+        amount: invoice.total,
+        paymentMethod: invoice.paymentMethod,
+        ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
+        invoiceId: invoice.invoiceId,
+        orderId: invoice.orderId,
+        notes: invoice.notes,
+      };
+    },
+    [selectedEWalletProvider, selectedPlan]
+  );
+
+  const isPreparedPaymentForCurrentCheckout = useCallback(
+    (pendingPayment: PendingAutomaticPaymentPayload, method: PaymentMethod) => {
+      if (!selectedPlan) {
+        return false;
+      }
+
+      const expectedEWalletProvider =
+        method === "ewallet" ? selectedEWalletProvider : undefined;
+
+      return (
+        pendingPayment.planId === selectedPlan.id &&
+        pendingPayment.customerName === customer.fullName &&
+        pendingPayment.customerEmail === customer.email &&
+        pendingPayment.customerWhatsapp === customer.whatsapp &&
+        (pendingPayment.businessName ?? "") === customer.businessName &&
+        pendingPayment.packageName === selectedPlan.name &&
+        pendingPayment.packageDescription === selectedPlan.description &&
+        pendingPayment.amount === selectedAmount &&
+        pendingPayment.paymentMethod === method &&
+        (pendingPayment.ewalletProvider ?? undefined) === expectedEWalletProvider &&
+        (pendingPayment.notes ?? "") === customer.notes
+      );
+    },
+    [
+      customer.businessName,
+      customer.email,
+      customer.fullName,
+      customer.notes,
+      customer.whatsapp,
+      selectedAmount,
+      selectedEWalletProvider,
+      selectedPlan,
+    ]
+  );
+
+  const prepareAutomaticPayment = useCallback(
+    async (method: PaymentMethod) => {
+      const existingPreparedPayment = readPreparedPayment();
+
+      if (
+        existingPreparedPayment &&
+        isPreparedPaymentForCurrentCheckout(existingPreparedPayment.payload, method)
+      ) {
+        setPreparedPaymentStatus(existingPreparedPayment.status);
+        return;
+      }
+
+      let payloadHash: string | null = null;
+      let pendingPayment: PendingAutomaticPaymentPayload | null = null;
+
+      try {
+        const invoice = createPendingInvoice(method);
+        pendingPayment = buildPendingPaymentPayload(invoice, method);
+        payloadHash = getPendingPaymentPayloadHash(pendingPayment);
+
+        if (backgroundRequestHashRef.current === payloadHash) {
+          setPreparedPaymentStatus("pending");
+          return;
+        }
+
+        backgroundRequestHashRef.current = payloadHash;
+
+        const pendingPreparedPayment: PreparedPayment = {
+          payloadHash,
+          payload: pendingPayment,
+          status: "pending",
+          createdAt: Date.now(),
+        };
+
+        writePreparedPayment(pendingPreparedPayment);
+        setPreparedPaymentStatus("pending");
+
+        const response = await fetch("/api/duitku/create-transaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pendingPayment),
+        });
+        const transaction = await readTransactionResponse(response);
+
+        if (!response.ok || !transaction.success) {
+          const errorMessage = getDuitkuErrorMessage(
+            transaction.code,
+            transaction.message,
+            transaction.detail
+          );
+
+          if (backgroundRequestHashRef.current === payloadHash) {
+            writePreparedPayment({
+              ...pendingPreparedPayment,
+              status: "failed",
+              error: errorMessage,
+              createdAt: Date.now(),
+            });
+          }
+
+          if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
+            setPreparedPaymentStatus("failed");
+          }
+
+          return;
+        }
+
+        const paymentUrl = getPaymentRedirectUrl(transaction);
+
+        if (!paymentUrl) {
+          const errorMessage =
+            "Transaksi berhasil dibuat, tetapi halaman pembayaran Duitku belum tersedia.";
+
+          if (backgroundRequestHashRef.current === payloadHash) {
+            writePreparedPayment({
+              ...pendingPreparedPayment,
+              status: "failed",
+              error: errorMessage,
+              response: transaction,
+              createdAt: Date.now(),
+            });
+          }
+
+          if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
+            setPreparedPaymentStatus("failed");
+          }
+
+          return;
+        }
+
+        if (backgroundRequestHashRef.current === payloadHash) {
+          updateStoredPreparedInvoice(pendingPayment, transaction, paymentUrl);
+
+          writePreparedPayment({
+            ...pendingPreparedPayment,
+            status: "ready",
+            paymentUrl,
+            response: transaction,
+            createdAt: Date.now(),
+          });
+        }
+
+        if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
+          setPreparedPaymentStatus("ready");
+        }
+      } catch {
+        if (
+          payloadHash &&
+          pendingPayment &&
+          backgroundRequestHashRef.current === payloadHash
+        ) {
+          writePreparedPayment({
+            payloadHash,
+            payload: pendingPayment,
+            status: "failed",
+            error: "Terjadi kendala jaringan saat menghubungkan ke Duitku.",
+            createdAt: Date.now(),
+          });
+
+          if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
+            setPreparedPaymentStatus("failed");
+          }
+        }
+      } finally {
+        if (backgroundRequestHashRef.current === payloadHash) {
+          backgroundRequestHashRef.current = null;
+        }
+      }
+    },
+    [
+      buildPendingPaymentPayload,
+      createPendingInvoice,
+      isPreparedPaymentForCurrentCheckout,
+    ]
+  );
+
+  useEffect(() => {
+    if (backgroundPrepareTimeoutRef.current) {
+      clearTimeout(backgroundPrepareTimeoutRef.current);
+      backgroundPrepareTimeoutRef.current = null;
+    }
+
+    if (
+      !selectedPlan ||
+      !hasCheckoutAmount ||
+      !selectedPaymentMethod ||
+      !isAutomaticPaymentActive(selectedPaymentMethod) ||
+      !hasRequiredAutomaticPaymentFields
+    ) {
+      return;
+    }
+
+    const method = selectedPaymentMethod;
+
+    backgroundPrepareTimeoutRef.current = setTimeout(() => {
+      void prepareAutomaticPayment(method);
+    }, backgroundPrepareDebounceMs);
+
+    return () => {
+      if (backgroundPrepareTimeoutRef.current) {
+        clearTimeout(backgroundPrepareTimeoutRef.current);
+        backgroundPrepareTimeoutRef.current = null;
+      }
+    };
+  }, [
+    hasCheckoutAmount,
+    hasRequiredAutomaticPaymentFields,
+    prepareAutomaticPayment,
+    selectedPaymentMethod,
+    selectedPlan,
+  ]);
 
   if (!selectedPlan) {
     return (
@@ -175,8 +785,6 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     );
   }
 
-  const selectedAmount = parsePackagePrice(selectedPlan.price);
-  const hasCheckoutAmount = selectedAmount > 0;
   const consultationLink = getWhatsAppLink(
     `Halo Digital Carroll Base, saya ingin konsultasi untuk paket ${selectedPlan.name}.`
   );
@@ -280,43 +888,43 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     return true;
   }
 
-  function createPendingInvoice(method: PaymentMethod) {
-    const invoice = createInvoiceData({
-      paymentMethod: method,
-      customerName: customer.fullName,
-      customerEmail: customer.email,
-      customerWhatsapp: customer.whatsapp,
-      businessName: customer.businessName,
-      packageName: checkoutPlan.name,
-      packageDescription: checkoutPlan.description,
-      packagePrice: checkoutAmount,
-      notes: customer.notes,
-    });
-
-    saveInvoice(invoice);
-    return invoice;
-  }
-
   function handleAutomaticPayment(method: PaymentMethod) {
     setIsProcessing(true);
-    const invoice = createPendingInvoice(method);
-    const pendingPayment: PendingAutomaticPaymentPayload = {
-      planId: checkoutPlan.id,
-      customerName: invoice.customerName,
-      customerEmail: invoice.customerEmail,
-      customerWhatsapp: invoice.customerWhatsapp,
-      businessName: invoice.businessName,
-      packageName: invoice.packageName,
-      packageDescription: invoice.packageDescription,
-      amount: invoice.total,
-      paymentMethod: invoice.paymentMethod,
-      ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
-      invoiceId: invoice.invoiceId,
-      orderId: invoice.orderId,
-      notes: invoice.notes,
-    };
+    const preparedPayment = readPreparedPayment();
+
+    if (
+      preparedPayment &&
+      isPreparedPaymentForCurrentCheckout(preparedPayment.payload, method)
+    ) {
+      const paymentUrl =
+        preparedPayment.paymentUrl ??
+        (preparedPayment.response
+          ? getPaymentRedirectUrl(preparedPayment.response)
+          : null);
+
+      if (preparedPayment.status === "ready" && paymentUrl) {
+        window.location.assign(paymentUrl);
+        return;
+      }
+
+      try {
+        window.sessionStorage.setItem(
+          pendingPaymentStorageKey,
+          JSON.stringify(preparedPayment.payload)
+        );
+        router.push("/payment/processing");
+      } catch {
+        setPaymentError("Gagal menyiapkan data pembayaran. Silakan coba lagi.");
+        setIsProcessing(false);
+      }
+
+      return;
+    }
 
     try {
+      const invoice = createPendingInvoice(method);
+      const pendingPayment = buildPendingPaymentPayload(invoice, method);
+
       window.sessionStorage.setItem(
         pendingPaymentStorageKey,
         JSON.stringify(pendingPayment)
@@ -468,6 +1076,17 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     );
   }
 
+  const automaticPreparationMessage =
+    selectedPaymentMethod &&
+    isAutomaticPaymentActive(selectedPaymentMethod) &&
+    hasRequiredAutomaticPaymentFields
+      ? preparedPaymentStatus === "pending"
+        ? "Menyiapkan pembayaran otomatis..."
+        : preparedPaymentStatus === "ready"
+          ? "Pembayaran siap. Anda akan diarahkan lebih cepat."
+          : ""
+      : "";
+
   const submitLabel = isProcessing
     ? "Memproses..."
     : isManualPayment(selectedPaymentMethod)
@@ -573,6 +1192,12 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           {paymentError && (
             <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/25 dark:text-red-300">
               {paymentError}
+            </p>
+          )}
+
+          {automaticPreparationMessage && (
+            <p className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/25 dark:text-blue-300">
+              {automaticPreparationMessage}
             </p>
           )}
 
