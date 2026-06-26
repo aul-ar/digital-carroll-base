@@ -43,6 +43,7 @@ type PreparedPaymentStatus = "pending" | "ready" | "failed";
 
 interface PreparedPayment {
   payloadHash: string;
+  payload: PendingPaymentPayload;
   status: PreparedPaymentStatus;
   paymentUrl?: string;
   response?: DuitkuCreateTransactionResponse;
@@ -134,27 +135,21 @@ function parsePendingPaymentPayload(value: unknown): PendingPaymentPayload | nul
   };
 }
 
-function normalizeStringForPayloadHash(value: string | undefined) {
-  return (value ?? "").trim();
-}
-
 function getPendingPaymentPayloadHash(payload: PendingPaymentPayload) {
   return JSON.stringify({
-    planId: normalizeStringForPayloadHash(payload.planId),
-    customerName: normalizeStringForPayloadHash(payload.customerName),
-    customerEmail: normalizeStringForPayloadHash(payload.customerEmail).toLowerCase(),
-    customerWhatsapp: normalizeStringForPayloadHash(payload.customerWhatsapp),
-    businessName: normalizeStringForPayloadHash(payload.businessName),
-    packageName: normalizeStringForPayloadHash(payload.packageName),
-    packageDescription: normalizeStringForPayloadHash(
-      payload.packageDescription
-    ),
-    amount: Number(payload.amount),
+    planId: payload.planId,
+    customerName: payload.customerName,
+    customerEmail: payload.customerEmail,
+    customerWhatsapp: payload.customerWhatsapp,
+    businessName: payload.businessName ?? "",
+    packageName: payload.packageName,
+    packageDescription: payload.packageDescription,
+    amount: payload.amount,
     paymentMethod: payload.paymentMethod,
     ewalletProvider: payload.ewalletProvider ?? null,
-    invoiceId: normalizeStringForPayloadHash(payload.invoiceId),
-    orderId: normalizeStringForPayloadHash(payload.orderId),
-    notes: normalizeStringForPayloadHash(payload.notes),
+    invoiceId: payload.invoiceId,
+    orderId: payload.orderId,
+    notes: payload.notes ?? "",
   });
 }
 
@@ -257,6 +252,12 @@ function readPreparedPayment() {
       return null;
     }
 
+    const payload = parsePendingPaymentPayload(parsed.payload);
+
+    if (!payload) {
+      return null;
+    }
+
     if (Date.now() - parsed.createdAt > preparedPaymentMaxAgeMs) {
       window.sessionStorage.removeItem(preparedPaymentStorageKey);
       return null;
@@ -264,6 +265,7 @@ function readPreparedPayment() {
 
     return {
       payloadHash: parsed.payloadHash,
+      payload,
       status: parsed.status,
       paymentUrl: optionalString(parsed.paymentUrl),
       response: parseDuitkuCreateTransactionResponse(parsed.response),
@@ -332,15 +334,6 @@ function getPaymentRedirectUrl(transaction: DuitkuCreateTransactionResponse) {
   return null;
 }
 
-function getPreparedPaymentUrl(preparedPayment: PreparedPayment) {
-  return (
-    preparedPayment.paymentUrl ??
-    (preparedPayment.response
-      ? getPaymentRedirectUrl(preparedPayment.response)
-      : null)
-  );
-}
-
 function updateStoredPaymentInvoice(
   payload: PendingPaymentPayload,
   transaction: DuitkuCreateTransactionResponse,
@@ -383,7 +376,7 @@ export default function PaymentProcessingPage() {
   const [loadingStatus, setLoadingStatus] = useState("Menghubungkan ke Duitku...");
   const [payload, setPayload] = useState<PendingPaymentPayload | null>(null);
   const [isRequestInFlight, setIsRequestInFlight] = useState(false);
-  const hasStartedRequestRef = useRef(false);
+  const hasStartedRef = useRef(false);
   const requestInFlightRef = useRef(false);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -433,17 +426,12 @@ export default function PaymentProcessingPage() {
 
       const pendingPreparedPayment: PreparedPayment = {
         payloadHash,
+        payload: pendingPayment,
         status: "pending",
         createdAt: Date.now(),
       };
 
       writePreparedPayment(pendingPreparedPayment);
-      console.info("[PAYMENT PREP] started", {
-        payloadHash,
-        orderId: pendingPayment.orderId,
-        invoiceId: pendingPayment.invoiceId,
-        source: "processing",
-      });
 
       try {
         const response = await fetch("/api/duitku/create-transaction", {
@@ -468,14 +456,6 @@ export default function PaymentProcessingPage() {
             createdAt: Date.now(),
           });
 
-          console.info("[PAYMENT PREP] failed", {
-            payloadHash,
-            orderId: pendingPayment.orderId,
-            invoiceId: pendingPayment.invoiceId,
-            code: transaction.code,
-            source: "processing",
-          });
-
           setErrorMessage(nextErrorMessage);
           setState("error");
           requestInFlightRef.current = false;
@@ -497,14 +477,6 @@ export default function PaymentProcessingPage() {
             createdAt: Date.now(),
           });
 
-          console.info("[PAYMENT PREP] failed", {
-            payloadHash,
-            orderId: pendingPayment.orderId,
-            invoiceId: pendingPayment.invoiceId,
-            reason: "missing_payment_url",
-            source: "processing",
-          });
-
           setErrorMessage(
             nextErrorMessage
           );
@@ -522,13 +494,6 @@ export default function PaymentProcessingPage() {
           createdAt: Date.now(),
         });
 
-        console.info("[PAYMENT PREP] ready", {
-          payloadHash,
-          orderId: pendingPayment.orderId,
-          invoiceId: pendingPayment.invoiceId,
-          source: "processing",
-        });
-
         redirectToPayment(pendingPayment, paymentUrl, transaction);
       } catch {
         const nextErrorMessage =
@@ -539,14 +504,6 @@ export default function PaymentProcessingPage() {
           status: "failed",
           error: nextErrorMessage,
           createdAt: Date.now(),
-        });
-
-        console.info("[PAYMENT PREP] failed", {
-          payloadHash,
-          orderId: pendingPayment.orderId,
-          invoiceId: pendingPayment.invoiceId,
-          reason: "network_error",
-          source: "processing",
         });
 
         setErrorMessage(nextErrorMessage);
@@ -579,7 +536,11 @@ export default function PaymentProcessingPage() {
         const preparedPayment = readPreparedPayment();
 
         if (preparedPayment?.payloadHash === payloadHash) {
-          const paymentUrl = getPreparedPaymentUrl(preparedPayment);
+          const paymentUrl =
+            preparedPayment.paymentUrl ??
+            (preparedPayment.response
+              ? getPaymentRedirectUrl(preparedPayment.response)
+              : null);
 
           if (preparedPayment.status === "ready" && paymentUrl) {
             redirectToPayment(
@@ -627,15 +588,13 @@ export default function PaymentProcessingPage() {
       const preparedPayment = readPreparedPayment();
 
       if (preparedPayment?.payloadHash === payloadHash) {
-        const paymentUrl = getPreparedPaymentUrl(preparedPayment);
+        const paymentUrl =
+          preparedPayment.paymentUrl ??
+          (preparedPayment.response
+            ? getPaymentRedirectUrl(preparedPayment.response)
+            : null);
 
         if (preparedPayment.status === "ready" && paymentUrl) {
-          console.info("[PAYMENT PREP] skipped_existing_ready", {
-            payloadHash,
-            orderId: pendingPayment.orderId,
-            invoiceId: pendingPayment.invoiceId,
-            source: "processing",
-          });
           redirectToPayment(
             pendingPayment,
             paymentUrl,
@@ -645,12 +604,6 @@ export default function PaymentProcessingPage() {
         }
 
         if (preparedPayment.status === "pending") {
-          console.info("[PAYMENT PREP] skipped_existing_pending", {
-            payloadHash,
-            orderId: pendingPayment.orderId,
-            invoiceId: pendingPayment.invoiceId,
-            source: "processing",
-          });
           waitForPreparedPayment(pendingPayment, payloadHash);
           return;
         }
@@ -671,11 +624,11 @@ export default function PaymentProcessingPage() {
   );
 
   useEffect(() => {
-    if (hasStartedRequestRef.current) {
+    if (hasStartedRef.current) {
       return;
     }
 
-    hasStartedRequestRef.current = true;
+    hasStartedRef.current = true;
 
     queueMicrotask(() => {
       const pendingPayment = readPendingPaymentPayload();

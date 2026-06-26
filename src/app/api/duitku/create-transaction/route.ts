@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   buildDuitkuCreateInvoiceSignature,
   createMerchantOrderId,
@@ -14,21 +13,13 @@ import { sendAdminOrderCreatedEmail } from "@/lib/admin-email";
 import { pricingPlans } from "@/data/pricing";
 import { createInvoiceExpiresAt, parsePackagePrice } from "@/lib/invoice";
 import { prisma } from "@/lib/prisma";
-import {
-  PaymentMethod,
-  Prisma,
-  type Invoice,
-  type Order,
-  type Payment,
-} from "@prisma/client";
+import { PaymentMethod, Prisma, type Order } from "@prisma/client";
 import { after } from "next/server";
 
 type DuitkuErrorCode =
   | "MISSING_DUITKU_ENV"
   | "INVALID_PAYMENT_METHOD"
   | "DUITKU_REQUEST_FAILED"
-  | "PAYMENT_ALREADY_COMPLETED"
-  | "PAYMENT_PREPARING"
   | "UNKNOWN_ERROR"
   | "VALIDATION_ERROR";
 
@@ -49,17 +40,6 @@ type DuitkuTransactionPayloadWithMeta = DuitkuTransactionPayload & {
   businessName?: string;
   notes?: string;
 };
-
-type ExistingPaymentRecord = Payment & {
-  order: Order & {
-    invoice: Invoice | null;
-  };
-};
-
-const paymentPreparationProviderPrefix = "duitku:preparing:";
-const paymentPreparationLockMs = 2 * 60 * 1000;
-const paymentPreparationWaitMs = 8 * 1000;
-const paymentPreparationPollMs = 400;
 
 function getSelectedPricingPlan(planId: unknown) {
   if (typeof planId !== "string" || !planId.trim()) {
@@ -157,258 +137,8 @@ function isUniqueConstraintError(reason: unknown) {
   );
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function toExistingPaymentRecord(
-  order: Order & {
-    invoice: Invoice | null;
-    payment: Payment | null;
-  }
-): ExistingPaymentRecord | null {
-  if (!order.payment) {
-    return null;
-  }
-
-  const { invoice, payment, ...orderFields } = order;
-
-  return {
-    ...payment,
-    order: {
-      ...orderFields,
-      invoice,
-    },
-  };
-}
-
-async function findExistingPaymentRecord(input: {
-  orderId: string;
-  invoiceId: string;
-  merchantOrderId: string;
-}) {
-  const paymentByMerchantOrderId = await prisma.payment.findFirst({
-    where: {
-      merchantOrderId: input.merchantOrderId,
-    },
-    include: {
-      order: {
-        include: {
-          invoice: true,
-        },
-      },
-    },
-  });
-
-  if (paymentByMerchantOrderId) {
-    return paymentByMerchantOrderId;
-  }
-
-  const order = await prisma.order.findUnique({
-    where: {
-      orderId: input.orderId,
-    },
-    include: {
-      invoice: true,
-      payment: true,
-    },
-  });
-
-  const paymentByOrderId = order ? toExistingPaymentRecord(order) : null;
-
-  if (paymentByOrderId) {
-    return paymentByOrderId;
-  }
-
-  const invoice = await prisma.invoice.findUnique({
-    where: {
-      invoiceId: input.invoiceId,
-    },
-    include: {
-      order: {
-        include: {
-          invoice: true,
-          payment: true,
-        },
-      },
-    },
-  });
-
-  return invoice ? toExistingPaymentRecord(invoice.order) : null;
-}
-
-function isInvoicePendingAndNotExpired(
-  invoice: Invoice | null,
-  now = new Date()
-) {
-  return (
-    invoice?.status === "PENDING" &&
-    (!invoice.expiresAt || invoice.expiresAt > now)
-  );
-}
-
-function isExistingPaymentPaid(payment: ExistingPaymentRecord) {
-  return (
-    payment.status === "PAID" ||
-    payment.order.status === "PAID" ||
-    payment.order.invoice?.status === "PAID"
-  );
-}
-
-function getExistingProviderPaymentUrl(payment: ExistingPaymentRecord) {
-  const paymentUrl = payment.providerPaymentUrl?.trim();
-  return paymentUrl || null;
-}
-
-function hasUsableExistingPaymentResponse(
-  payment: ExistingPaymentRecord,
-  now = new Date()
-) {
-  if (
-    payment.status !== "PENDING" ||
-    !isInvoicePendingAndNotExpired(payment.order.invoice, now)
-  ) {
-    return false;
-  }
-
-  return Boolean(
-    getExistingProviderPaymentUrl(payment) ||
-      payment.providerReference?.trim() ||
-      payment.vaNumber?.trim() ||
-      payment.qrString?.trim()
-  );
-}
-
-function isPaymentPreparationProvider(provider: string | null) {
-  return Boolean(provider?.startsWith(paymentPreparationProviderPrefix));
-}
-
-function isActivePaymentPreparation(
-  payment: ExistingPaymentRecord,
-  now = new Date()
-) {
-  return (
-    isPaymentPreparationProvider(payment.provider) &&
-    now.getTime() - payment.updatedAt.getTime() < paymentPreparationLockMs
-  );
-}
-
-function buildExistingPaymentResponse(
-  payment: ExistingPaymentRecord,
-  environment: "mock" | "production"
-) {
-  const paymentUrl = getExistingProviderPaymentUrl(payment);
-
-  return {
-    success: true,
-    provider: "duitku",
-    environment,
-    paymentUrl,
-    redirectUrl: paymentUrl,
-    data: {
-      reference: payment.providerReference ?? undefined,
-      paymentUrl,
-      vaNumber: payment.vaNumber ?? undefined,
-      qrString: payment.qrString ?? undefined,
-      merchantOrderId: payment.merchantOrderId ?? payment.order.orderId,
-      invoiceId: payment.order.invoice?.invoiceId,
-      orderId: payment.order.orderId,
-    },
-  };
-}
-
-function buildAlreadyPaidResponse(payment: ExistingPaymentRecord) {
-  return {
-    success: false,
-    code: "PAYMENT_ALREADY_COMPLETED" satisfies DuitkuErrorCode,
-    message: "Pembayaran untuk invoice ini sudah selesai.",
-    data: {
-      reference: payment.providerReference ?? undefined,
-      merchantOrderId: payment.merchantOrderId ?? payment.order.orderId,
-      invoiceId: payment.order.invoice?.invoiceId,
-      orderId: payment.order.orderId,
-    },
-  };
-}
-
-async function waitForExistingPaymentResolution(input: {
-  orderId: string;
-  invoiceId: string;
-  merchantOrderId: string;
-}) {
-  const waitStartedAt = Date.now();
-
-  while (Date.now() - waitStartedAt < paymentPreparationWaitMs) {
-    await sleep(paymentPreparationPollMs);
-
-    const existingPayment = await findExistingPaymentRecord(input);
-
-    if (!existingPayment) {
-      return null;
-    }
-
-    if (
-      isExistingPaymentPaid(existingPayment) ||
-      hasUsableExistingPaymentResponse(existingPayment) ||
-      !isActivePaymentPreparation(existingPayment)
-    ) {
-      return existingPayment;
-    }
-  }
-
-  return findExistingPaymentRecord(input);
-}
-
-async function claimPaymentPreparation(input: {
-  paymentId: string;
-  paymentMethod: PaymentMethod;
-  merchantOrderId: string;
-  paymentCode: string;
-  amount: number;
-}) {
-  const provider = `${paymentPreparationProviderPrefix}${randomUUID()}`;
-  const staleBefore = new Date(Date.now() - paymentPreparationLockMs);
-  const result = await prisma.payment.updateMany({
-    where: {
-      id: input.paymentId,
-      providerPaymentUrl: null,
-      status: {
-        not: "PAID",
-      },
-      OR: [
-        {
-          provider: "duitku",
-        },
-        {
-          provider: null,
-        },
-        {
-          provider: {
-            startsWith: paymentPreparationProviderPrefix,
-          },
-          updatedAt: {
-            lt: staleBefore,
-          },
-        },
-      ],
-    },
-    data: {
-      status: "PENDING",
-      paymentMethod: input.paymentMethod,
-      provider,
-      merchantOrderId: input.merchantOrderId,
-      paymentCode: input.paymentCode,
-      amount: input.amount,
-    },
-  });
-
-  return result.count > 0 ? provider : null;
-}
-
 export async function POST(request: Request) {
   const startedAt = Date.now();
-  let claimedPaymentId: string | null = null;
-  let claimedPaymentProvider: string | null = null;
   type TimingEntry = {
     seq: number;
     stage: string;
@@ -636,59 +366,6 @@ export async function POST(request: Request) {
       duitkuPaymentMethodCode,
     });
 
-    logTiming("idempotency_precheck_start");
-    const existingPaymentBeforeWrite = await findExistingPaymentRecord({
-      orderId: payload.orderId,
-      invoiceId: payload.invoiceId,
-      merchantOrderId,
-    });
-
-    if (existingPaymentBeforeWrite) {
-      if (isExistingPaymentPaid(existingPaymentBeforeWrite)) {
-        console.info("[PAYMENT IDEMPOTENCY] existing_paid_invoice", {
-          orderId: payload.orderId,
-          invoiceId: payload.invoiceId,
-          merchantOrderId,
-          paymentId: existingPaymentBeforeWrite.id,
-        });
-
-        flushTimingSummary("idempotency_existing_paid_invoice", {
-          orderId: payload.orderId,
-          invoiceId: payload.invoiceId,
-          merchantOrderId,
-        });
-        return Response.json(
-          buildAlreadyPaidResponse(existingPaymentBeforeWrite),
-          { status: 409 }
-        );
-      }
-
-      if (hasUsableExistingPaymentResponse(existingPaymentBeforeWrite)) {
-        console.info("[PAYMENT IDEMPOTENCY] existing_payment_url_returned", {
-          orderId: payload.orderId,
-          invoiceId: payload.invoiceId,
-          merchantOrderId,
-          paymentId: existingPaymentBeforeWrite.id,
-        });
-
-        flushTimingSummary("idempotency_existing_payment_url_returned", {
-          orderId: payload.orderId,
-          invoiceId: payload.invoiceId,
-          merchantOrderId,
-        });
-        return Response.json(
-          buildExistingPaymentResponse(
-            existingPaymentBeforeWrite,
-            config.mockEnabled ? "mock" : "production"
-          )
-        );
-      }
-    }
-
-    logTiming("idempotency_precheck_done", {
-      existingPaymentFound: Boolean(existingPaymentBeforeWrite),
-    });
-
     logTiming("database_start");
 
     // Critical before Duitku: persist the order/payment skeleton so callbacks can
@@ -723,210 +400,58 @@ export async function POST(request: Request) {
         throw reason;
       }
 
-      await prisma.order.updateMany({
+      order = await prisma.order.update({
         where: {
           orderId: payload.orderId,
-          status: {
-            not: "PAID",
-          },
         },
         data: orderData,
       });
-
-      const existingOrder = await prisma.order.findUnique({
-        where: {
-          orderId: payload.orderId,
-        },
-      });
-
-      if (!existingOrder) {
-        throw new Error("Existing order could not be loaded.");
-      }
-
-      order = existingOrder;
     }
 
-    let invoice: Invoice;
-    let paymentRecord: Payment | null = null;
-
-    try {
-      invoice = await prisma.invoice.create({
-        data: {
-          invoiceId: payload.invoiceId,
-          status: "PENDING",
-          paymentMethod: prismaPaymentMethod,
-          expiresAt,
-          orderIdRef: order.id,
-        },
-      });
-    } catch (reason) {
-      if (!isUniqueConstraintError(reason)) {
-        throw reason;
-      }
-
-      await prisma.invoice.updateMany({
+    // Critical before Duitku: invoice/payment writes are independent once order
+    // exists, so run them together while keeping both before createInvoice.
+    const [invoice, paymentRecord] = await Promise.all([
+      prisma.invoice.upsert({
         where: {
           invoiceId: payload.invoiceId,
-          status: {
-            not: "PAID",
-          },
         },
-        data: {
+        update: {
           status: "PENDING",
           paymentMethod: prismaPaymentMethod,
           paidAt: null,
           expiresAt,
         },
-      });
-
-      const existingInvoice = await prisma.invoice.findUnique({
-        where: {
+        create: {
           invoiceId: payload.invoiceId,
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          expiresAt,
+          orderIdRef: order.id,
         },
-      });
-
-      if (!existingInvoice) {
-        throw new Error("Existing invoice could not be loaded.");
-      }
-
-      invoice = existingInvoice;
-    }
-
-    paymentRecord = await prisma.payment.findUnique({
-      where: {
-        orderIdRef: order.id,
-      },
-    });
-
-    if (!paymentRecord) {
-      try {
-        paymentRecord = await prisma.payment.create({
-          data: {
-            status: "PENDING",
-            paymentMethod: prismaPaymentMethod,
-            provider: "duitku",
-            merchantOrderId,
-            paymentCode: duitkuPaymentMethodCode,
-            amount: payload.amount,
-            orderIdRef: order.id,
-          },
-        });
-      } catch (reason) {
-        if (!isUniqueConstraintError(reason)) {
-          throw reason;
-        }
-
-        paymentRecord = await prisma.payment.findFirst({
-          where: {
-            OR: [
-              {
-                orderIdRef: order.id,
-              },
-              {
-                merchantOrderId,
-              },
-            ],
-          },
-        });
-      }
-    }
-
-    if (!paymentRecord) {
-      throw new Error("Existing payment could not be loaded.");
-    }
-
-    if (!isPaymentPreparationProvider(paymentRecord.provider)) {
-      await prisma.payment.updateMany({
+      }),
+      prisma.payment.upsert({
         where: {
           orderIdRef: order.id,
-          status: {
-            not: "PAID",
-          },
-          provider: {
-            not: {
-              startsWith: paymentPreparationProviderPrefix,
-            },
-          },
         },
-        data: {
+        update: {
           status: "PENDING",
           paymentMethod: prismaPaymentMethod,
           provider: "duitku",
           merchantOrderId,
-          paymentCode: duitkuPaymentMethodCode,
           amount: payload.amount,
         },
-      });
-
-      paymentRecord = await prisma.payment.findUnique({
-        where: {
+        create: {
+          status: "PENDING",
+          paymentMethod: prismaPaymentMethod,
+          provider: "duitku",
+          merchantOrderId,
+          amount: payload.amount,
           orderIdRef: order.id,
         },
-      });
-    }
-
-    if (!paymentRecord) {
-      throw new Error("Payment record could not be loaded after update.");
-    }
+      }),
+    ]);
 
     logTiming("database_done");
-
-    logTiming("idempotency_postwrite_start");
-    let existingPaymentAfterWrite = await findExistingPaymentRecord({
-      orderId: payload.orderId,
-      invoiceId: payload.invoiceId,
-      merchantOrderId,
-    });
-
-    if (!existingPaymentAfterWrite) {
-      throw new Error("Payment record could not be loaded for idempotency.");
-    }
-
-    if (isExistingPaymentPaid(existingPaymentAfterWrite)) {
-      console.info("[PAYMENT IDEMPOTENCY] existing_paid_invoice", {
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-        paymentId: existingPaymentAfterWrite.id,
-      });
-
-      flushTimingSummary("idempotency_existing_paid_invoice", {
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-      });
-      return Response.json(
-        buildAlreadyPaidResponse(existingPaymentAfterWrite),
-        { status: 409 }
-      );
-    }
-
-    if (hasUsableExistingPaymentResponse(existingPaymentAfterWrite)) {
-      console.info("[PAYMENT IDEMPOTENCY] existing_payment_url_returned", {
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-        paymentId: existingPaymentAfterWrite.id,
-      });
-
-      flushTimingSummary("idempotency_existing_payment_url_returned", {
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-      });
-      return Response.json(
-        buildExistingPaymentResponse(
-          existingPaymentAfterWrite,
-          config.mockEnabled ? "mock" : "production"
-        )
-      );
-    }
-
-    logTiming("idempotency_postwrite_done", {
-      paymentId: existingPaymentAfterWrite.id,
-      paymentStatus: existingPaymentAfterWrite.status,
-      provider: existingPaymentAfterWrite.provider,
-    });
 
     logTiming("admin_email_start", {
       isNewOrder,
@@ -988,127 +513,6 @@ export async function POST(request: Request) {
         },
       });
     }
-
-    logTiming("payment_preparation_claim_start", {
-      paymentId: existingPaymentAfterWrite.id,
-    });
-
-    let preparationClaim = await claimPaymentPreparation({
-      paymentId: existingPaymentAfterWrite.id,
-      paymentMethod: prismaPaymentMethod,
-      merchantOrderId,
-      paymentCode: duitkuPaymentMethodCode,
-      amount: payload.amount,
-    });
-
-    if (!preparationClaim) {
-      logTiming("payment_preparation_wait_start", {
-        paymentId: existingPaymentAfterWrite.id,
-      });
-
-      const waitedPayment = await waitForExistingPaymentResolution({
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-      });
-
-      if (waitedPayment) {
-        if (isExistingPaymentPaid(waitedPayment)) {
-          console.info("[PAYMENT IDEMPOTENCY] existing_paid_invoice", {
-            orderId: payload.orderId,
-            invoiceId: payload.invoiceId,
-            merchantOrderId,
-            paymentId: waitedPayment.id,
-          });
-
-          flushTimingSummary("idempotency_existing_paid_invoice", {
-            orderId: payload.orderId,
-            invoiceId: payload.invoiceId,
-            merchantOrderId,
-          });
-          return Response.json(buildAlreadyPaidResponse(waitedPayment), {
-            status: 409,
-          });
-        }
-
-        if (hasUsableExistingPaymentResponse(waitedPayment)) {
-          console.info("[PAYMENT IDEMPOTENCY] existing_payment_url_returned", {
-            orderId: payload.orderId,
-            invoiceId: payload.invoiceId,
-            merchantOrderId,
-            paymentId: waitedPayment.id,
-          });
-
-          flushTimingSummary("idempotency_existing_payment_url_returned", {
-            orderId: payload.orderId,
-            invoiceId: payload.invoiceId,
-            merchantOrderId,
-          });
-          return Response.json(
-            buildExistingPaymentResponse(waitedPayment, "production")
-          );
-        }
-
-        if (isActivePaymentPreparation(waitedPayment)) {
-          flushTimingSummary("idempotency_existing_payment_preparing", {
-            orderId: payload.orderId,
-            invoiceId: payload.invoiceId,
-            merchantOrderId,
-            paymentId: waitedPayment.id,
-          });
-          return Response.json(
-            {
-              success: false,
-              code: "PAYMENT_PREPARING" satisfies DuitkuErrorCode,
-              message:
-                "Transaksi pembayaran sedang disiapkan. Silakan tunggu sebentar.",
-            },
-            { status: 409 }
-          );
-        }
-
-        existingPaymentAfterWrite = waitedPayment;
-        preparationClaim = await claimPaymentPreparation({
-          paymentId: waitedPayment.id,
-          paymentMethod: prismaPaymentMethod,
-          merchantOrderId,
-          paymentCode: duitkuPaymentMethodCode,
-          amount: payload.amount,
-        });
-      }
-    }
-
-    if (!preparationClaim) {
-      flushTimingSummary("idempotency_claim_failed", {
-        orderId: payload.orderId,
-        invoiceId: payload.invoiceId,
-        merchantOrderId,
-        paymentId: existingPaymentAfterWrite.id,
-      });
-      return Response.json(
-        {
-          success: false,
-          code: "PAYMENT_PREPARING" satisfies DuitkuErrorCode,
-          message:
-            "Transaksi pembayaran sedang disiapkan. Silakan tunggu sebentar.",
-        },
-        { status: 409 }
-      );
-    }
-
-    claimedPaymentId = existingPaymentAfterWrite.id;
-    claimedPaymentProvider = preparationClaim;
-
-    console.info("[PAYMENT IDEMPOTENCY] creating_new_duitku_invoice", {
-      orderId: payload.orderId,
-      invoiceId: payload.invoiceId,
-      merchantOrderId,
-      paymentId: existingPaymentAfterWrite.id,
-    });
-
-    logTiming("payment_preparation_claim_done", {
-      paymentId: existingPaymentAfterWrite.id,
-    });
 
     const callbackUrl = `${config.siteUrl}/api/duitku/callback`;
     const returnUrl = `${config.siteUrl}/payment/pending?invoiceId=${encodeURIComponent(
@@ -1188,11 +592,9 @@ export async function POST(request: Request) {
       Boolean(duitkuData.paymentUrl);
 
     if (isSuccess) {
-      logTiming("provider_payment_update_start");
+      logTiming("provider_payment_update_queued");
 
       const providerPaymentUpdate = {
-        status: "PENDING" as const,
-        provider: "duitku",
         providerReference: duitkuData.reference,
         providerPaymentUrl: duitkuData.paymentUrl,
         paymentCode: duitkuPaymentMethodCode,
@@ -1200,17 +602,23 @@ export async function POST(request: Request) {
         qrString: duitkuData.qrString,
       };
 
-      await prisma.payment.update({
-        where: {
-          id: claimedPaymentId ?? existingPaymentAfterWrite.id,
-        },
-        data: providerPaymentUpdate,
+      // Non-critical after response: callback lookup works via merchantOrderId
+      // already saved before Duitku, while this persists display/reference data.
+      after(async () => {
+        try {
+          await prisma.payment.update({
+            where: {
+              orderIdRef: order.id,
+            },
+            data: providerPaymentUpdate,
+          });
+        } catch (reason) {
+          console.error("Duitku provider payment update failed", {
+            merchantOrderId,
+            message: reason instanceof Error ? reason.message : "Unknown error",
+          });
+        }
       });
-
-      claimedPaymentId = null;
-      claimedPaymentProvider = null;
-
-      logTiming("provider_payment_update_done");
 
       flushTimingSummary("response_success", {
         environment: "production",
@@ -1235,15 +643,12 @@ export async function POST(request: Request) {
 
     await prisma.payment.update({
       where: {
-        id: claimedPaymentId ?? existingPaymentAfterWrite.id,
+        orderIdRef: order.id,
       },
       data: {
         status: "FAILED",
-        provider: "duitku",
       },
     });
-    claimedPaymentId = null;
-    claimedPaymentProvider = null;
 
     logDuitkuError({
       code: "DUITKU_REQUEST_FAILED",
@@ -1270,29 +675,6 @@ export async function POST(request: Request) {
       { status: duitkuResponse.ok ? 400 : 500 }
     );
   } catch (reason) {
-    if (claimedPaymentId && claimedPaymentProvider) {
-      try {
-        await prisma.payment.updateMany({
-          where: {
-            id: claimedPaymentId,
-            provider: claimedPaymentProvider,
-          },
-          data: {
-            status: "FAILED",
-            provider: "duitku",
-          },
-        });
-      } catch (cleanupReason) {
-        console.error("Duitku payment preparation cleanup failed", {
-          paymentId: claimedPaymentId,
-          message:
-            cleanupReason instanceof Error
-              ? cleanupReason.message
-              : "Unknown error",
-        });
-      }
-    }
-
     logDuitkuError({
       code: "UNKNOWN_ERROR",
       statusMessage: reason instanceof Error ? reason.message : "Unknown error",
