@@ -64,6 +64,12 @@ interface DuitkuCreateTransactionResponse {
     paymentUrl?: string | null;
     vaNumber?: string;
     qrString?: string;
+    status?: string;
+    statusCode?: string;
+    statusMessage?: string;
+    merchantOrderId?: string;
+    invoiceId?: string;
+    orderId?: string;
   };
 }
 
@@ -295,6 +301,12 @@ function parseDuitkuCreateTransactionResponse(
     const dataPaymentUrl = optionalString(value.data.paymentUrl);
     const vaNumber = optionalString(value.data.vaNumber);
     const qrString = optionalString(value.data.qrString);
+    const status = optionalString(value.data.status);
+    const statusCode = optionalString(value.data.statusCode);
+    const statusMessage = optionalString(value.data.statusMessage);
+    const merchantOrderId = optionalString(value.data.merchantOrderId);
+    const invoiceId = optionalString(value.data.invoiceId);
+    const orderId = optionalString(value.data.orderId);
 
     if (reference !== undefined) {
       data.reference = reference;
@@ -310,6 +322,30 @@ function parseDuitkuCreateTransactionResponse(
 
     if (qrString !== undefined) {
       data.qrString = qrString;
+    }
+
+    if (status !== undefined) {
+      data.status = status;
+    }
+
+    if (statusCode !== undefined) {
+      data.statusCode = statusCode;
+    }
+
+    if (statusMessage !== undefined) {
+      data.statusMessage = statusMessage;
+    }
+
+    if (merchantOrderId !== undefined) {
+      data.merchantOrderId = merchantOrderId;
+    }
+
+    if (invoiceId !== undefined) {
+      data.invoiceId = invoiceId;
+    }
+
+    if (orderId !== undefined) {
+      data.orderId = orderId;
     }
 
     transaction.data = data;
@@ -362,8 +398,7 @@ function readPreparedPayment() {
     }
 
     const parsed: unknown = JSON.parse(raw);
-
-    if (
+        if (
       !isRecord(parsed) ||
       typeof parsed.payloadHash !== "string" ||
       !isPreparedPaymentStatus(parsed.status) ||
@@ -452,6 +487,15 @@ function getPaymentRedirectUrl(transaction: DuitkuCreateTransactionResponse) {
   }
 
   return null;
+}
+
+function isPaymentPreparingResponse(transaction: DuitkuCreateTransactionResponse) {
+  return (
+    transaction.success &&
+    (transaction.code === "PAYMENT_PREPARING" ||
+      transaction.data?.status === "preparing_payment" ||
+      transaction.data?.statusCode === "PROCESSING")
+  );
 }
 
 function getPreparedPaymentUrl(preparedPayment: PreparedPayment) {
@@ -573,7 +617,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       customer.fullName,
       customer.notes,
       customer.whatsapp,
-      selectedAmount,
+            selectedAmount,
       selectedPlan,
     ]
   );
@@ -816,6 +860,29 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           const paymentUrl = getPaymentRedirectUrl(transaction);
 
           if (!paymentUrl) {
+            if (isPaymentPreparingResponse(transaction)) {
+              if (activePayloadHashRef.current === payloadHash) {
+                writePreparedPayment({
+                  ...pendingPreparedPayment,
+                  status: "pending",
+                  response: transaction,
+                  createdAt: Date.now(),
+                });
+              }
+
+              console.info("[PAYMENT PREP] ready_pending_provider", {
+                payloadHash,
+                orderId: pendingPayment.orderId,
+                invoiceId: pendingPayment.invoiceId,
+              });
+
+              if (isPreparedPaymentForCurrentCheckout(pendingPayment, method)) {
+                setPreparedPaymentStatus("pending");
+              }
+
+              return;
+            }
+
             const errorMessage =
               "Transaksi berhasil dibuat, tetapi halaman pembayaran Duitku belum tersedia.";
 
@@ -1050,8 +1117,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       setError(validationMessage);
       return false;
     }
-
-    if (!selectedPaymentMethod) {
+        if (!selectedPaymentMethod) {
       setPaymentError("Silakan pilih metode pembayaran terlebih dahulu.");
       return false;
     }

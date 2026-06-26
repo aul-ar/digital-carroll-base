@@ -159,6 +159,7 @@ function isUniqueConstraintError(reason: unknown) {
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
+
   type TimingEntry = {
     seq: number;
     stage: string;
@@ -206,6 +207,7 @@ export async function POST(request: Request) {
   try {
     const body =
       (await request.json()) as Partial<DuitkuTransactionPayloadWithMeta>;
+
     logTiming("body_parsed");
 
     const selectedPlan = getSelectedPricingPlan(body.planId);
@@ -221,6 +223,7 @@ export async function POST(request: Request) {
         reason: "selected_plan_not_found",
         paymentMethod: body.paymentMethod ?? null,
       });
+
       return Response.json(
         {
           success: false,
@@ -245,6 +248,7 @@ export async function POST(request: Request) {
         reason: "invalid_selected_amount",
         planId: selectedPlan.id,
       });
+
       return Response.json(
         {
           success: false,
@@ -281,6 +285,7 @@ export async function POST(request: Request) {
         paymentMethod: normalizedBody.paymentMethod ?? null,
         message: ewalletProvider.message,
       });
+
       return Response.json(
         {
           success: false,
@@ -314,6 +319,7 @@ export async function POST(request: Request) {
         message: validation.message,
         paymentMethod: normalizedBody.paymentMethod ?? null,
       });
+
       return Response.json(
         {
           success: false,
@@ -336,6 +342,7 @@ export async function POST(request: Request) {
         merchantCodeConfigured: Boolean(config.merchantCode),
         apiKeyConfigured: Boolean(config.apiKey),
       });
+
       return Response.json(
         {
           success: false,
@@ -370,6 +377,7 @@ export async function POST(request: Request) {
         ewalletProvider: payload.ewalletProvider ?? null,
         duitkuPaymentMethodCode,
       });
+
       return Response.json(
         {
           success: false,
@@ -388,8 +396,6 @@ export async function POST(request: Request) {
 
     logTiming("database_start");
 
-    // Critical before Duitku: persist the order/payment skeleton so callbacks can
-    // resolve by merchantOrderId even if Duitku calls back very quickly.
     const orderData = {
       status: "WAITING_PAYMENT" as const,
       customerName: payload.customerName,
@@ -404,6 +410,7 @@ export async function POST(request: Request) {
       total: payload.amount,
       notes: payload.notes ?? null,
     };
+
     let isNewOrder = false;
     let order: Order;
 
@@ -414,6 +421,7 @@ export async function POST(request: Request) {
           ...orderData,
         },
       });
+
       isNewOrder = true;
     } catch (reason) {
       if (!isUniqueConstraintError(reason)) {
@@ -428,8 +436,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Critical before Duitku: invoice/payment writes are independent once order
-    // exists, so run them together while keeping both before createInvoice.
     const [invoice, paymentRecord] = await Promise.all([
       prisma.invoice.upsert({
         where: {
@@ -476,6 +482,7 @@ export async function POST(request: Request) {
     logTiming("admin_email_start", {
       isNewOrder,
     });
+
     if (isNewOrder) {
       const isSmtpEnvComplete = Boolean(
         process.env.SMTP_HOST &&
@@ -506,7 +513,6 @@ export async function POST(request: Request) {
         createdAt: order.createdAt,
       };
 
-      // Non-critical after response: admin notification must not delay paymentUrl.
       after(async () => {
         await sendAdminOrderCreatedEmail(adminEmailInput);
       });
@@ -520,6 +526,7 @@ export async function POST(request: Request) {
       flushTimingSummary("response_success", {
         environment: "mock",
       });
+
       return Response.json({
         success: true,
         provider: "duitku",
@@ -575,7 +582,11 @@ export async function POST(request: Request) {
       expiryPeriod: 10,
     };
 
-    console.log("DUITKU REQUEST URL:", `${config.baseUrl}/api/merchant/createInvoice`);
+    console.log(
+      "DUITKU REQUEST URL:",
+      `${config.baseUrl}/api/merchant/createInvoice`
+    );
+
     if (isDuitkuDebugLogsEnabled()) {
       console.log("DUITKU REQUEST PAYLOAD:", duitkuPayload);
     } else {
@@ -591,140 +602,129 @@ export async function POST(request: Request) {
       });
     }
 
-    logTiming("duitku_request_start");
+    logTiming("duitku_request_queued");
 
-    const duitkuResponse = await fetch(
-      `${config.baseUrl}/api/merchant/createInvoice`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-duitku-signature": signature,
-          "x-duitku-timestamp": timestamp,
-          "x-duitku-merchantcode": config.merchantCode,
-        },
-        body: JSON.stringify(duitkuPayload),
-        cache: "no-store",
-      }
-    );
+    after(async () => {
+      const providerStartedAt = Date.now();
 
-    const duitkuData = await readDuitkuResponse(duitkuResponse);
+      try {
+        console.info("DUITKU ASYNC REQUEST STARTED", {
+          merchantOrderId,
+          invoiceId: payload.invoiceId,
+          paymentMethod: duitkuPaymentMethodCode,
+        });
 
-    logTiming("duitku_request_done", {
-      httpStatus: duitkuResponse.status,
-      statusCode: duitkuData.statusCode,
-      statusMessage: redactSensitiveLogText(
-        duitkuData.statusMessage ?? duitkuData.Message
-      ),
-    });
+        const duitkuResponse = await fetch(
+          `${config.baseUrl}/api/merchant/createInvoice`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-duitku-signature": signature,
+              "x-duitku-timestamp": timestamp,
+              "x-duitku-merchantcode": config.merchantCode,
+            },
+            body: JSON.stringify(duitkuPayload),
+            cache: "no-store",
+          }
+        );
 
-    console.log("DUITKU STATUS:", duitkuResponse.status);
-    if (isDuitkuDebugLogsEnabled()) {
-      console.log("DUITKU DATA:", duitkuData);
-    } else {
-      console.info("DUITKU RESPONSE SUMMARY:", {
-        statusCode: duitkuData.statusCode ?? null,
-        statusMessage: redactSensitiveLogText(
-          duitkuData.statusMessage ?? duitkuData.Message
-        ),
-        hasReference: Boolean(duitkuData.reference),
-        hasPaymentUrl: Boolean(duitkuData.paymentUrl),
-        hasVaNumber: Boolean(duitkuData.vaNumber),
-        hasQrString: Boolean(duitkuData.qrString),
-        hasAmount: duitkuData.amount !== undefined,
-      });
-    }
+        const duitkuData = await readDuitkuResponse(duitkuResponse);
 
-    const isSuccess =
-      duitkuResponse.ok &&
-      duitkuData.statusCode === "00" &&
-      Boolean(duitkuData.paymentUrl);
+        console.info("DUITKU ASYNC REQUEST DONE", {
+          merchantOrderId,
+          invoiceId: payload.invoiceId,
+          httpStatus: duitkuResponse.status,
+          statusCode: duitkuData.statusCode ?? null,
+          elapsedMs: Date.now() - providerStartedAt,
+          hasPaymentUrl: Boolean(duitkuData.paymentUrl),
+          hasReference: Boolean(duitkuData.reference),
+        });
 
-    if (isSuccess) {
-      logTiming("provider_payment_update_queued");
+        const isSuccess =
+          duitkuResponse.ok &&
+          duitkuData.statusCode === "00" &&
+          Boolean(duitkuData.paymentUrl);
 
-      const providerPaymentUpdate = {
-        providerReference: duitkuData.reference,
-        providerPaymentUrl: duitkuData.paymentUrl,
-        paymentCode: duitkuPaymentMethodCode,
-        vaNumber: duitkuData.vaNumber,
-        qrString: duitkuData.qrString,
-      };
-
-      // Non-critical after response: callback lookup works via merchantOrderId
-      // already saved before Duitku, while this persists display/reference data.
-      after(async () => {
-        try {
+        if (isSuccess) {
           await prisma.payment.update({
             where: {
               orderIdRef: order.id,
             },
-            data: providerPaymentUpdate,
+            data: {
+              providerReference: duitkuData.reference,
+              providerPaymentUrl: duitkuData.paymentUrl,
+              paymentCode: duitkuPaymentMethodCode,
+              vaNumber: duitkuData.vaNumber,
+              qrString: duitkuData.qrString,
+            },
           });
-        } catch (reason) {
-          console.error("Duitku provider payment update failed", {
-            merchantOrderId,
-            message: reason instanceof Error ? reason.message : "Unknown error",
-          });
+
+          return;
         }
-      });
 
-      flushTimingSummary("response_success", {
-        environment: "production",
-      });
-      return Response.json({
-        success: true,
-        provider: "duitku",
-        environment: "production",
-        data: {
-          reference: duitkuData.reference,
-          paymentUrl: duitkuData.paymentUrl,
-          vaNumber: duitkuData.vaNumber,
-          qrString: duitkuData.qrString,
-          statusCode: duitkuData.statusCode,
-          statusMessage: duitkuData.statusMessage,
+        await prisma.payment.update({
+          where: {
+            orderIdRef: order.id,
+          },
+          data: {
+            status: "FAILED",
+          },
+        });
+
+        logDuitkuError({
+          code: "DUITKU_REQUEST_FAILED",
+          httpStatus: duitkuResponse.status,
+          statusMessage: getSafeStatusMessage(duitkuData),
           merchantOrderId,
-          invoiceId: payload.invoiceId,
-          orderId: payload.orderId,
-        },
-      });
-    }
+          paymentMethod: payload.paymentMethod,
+          duitkuPaymentMethodCode,
+        });
+      } catch (reason) {
+        await prisma.payment.update({
+          where: {
+            orderIdRef: order.id,
+          },
+          data: {
+            status: "FAILED",
+          },
+        });
 
-    await prisma.payment.update({
-      where: {
-        orderIdRef: order.id,
-      },
+        logDuitkuError({
+          code: "UNKNOWN_ERROR",
+          statusMessage: reason instanceof Error ? reason.message : String(reason),
+          merchantOrderId,
+          paymentMethod: payload.paymentMethod,
+          duitkuPaymentMethodCode,
+        });
+      }
+    });
+
+    flushTimingSummary("response_accepted", {
+      environment: "production",
+      mode: "async_payment_preparation",
+    });
+
+    return Response.json({
+      success: true,
+      provider: "duitku",
+      environment: "production",
+      code: "PAYMENT_PREPARING",
+      message: "Pembayaran sedang disiapkan.",
+      paymentUrl: null,
       data: {
-        status: "FAILED",
+        reference: null,
+        paymentUrl: null,
+        vaNumber: null,
+        qrString: null,
+        statusCode: "PROCESSING",
+        statusMessage: "Pembayaran sedang disiapkan.",
+        status: "preparing_payment",
+        merchantOrderId,
+        invoiceId: payload.invoiceId,
+        orderId: payload.orderId,
       },
     });
-
-    logDuitkuError({
-      code: "DUITKU_REQUEST_FAILED",
-      httpStatus: duitkuResponse.status,
-      statusMessage: getSafeStatusMessage(duitkuData),
-      merchantOrderId,
-      paymentMethod: payload.paymentMethod,
-      duitkuPaymentMethodCode,
-    });
-
-    flushTimingSummary("response_failed", {
-      httpStatus: duitkuResponse.status,
-      statusCode: duitkuData.statusCode ?? null,
-      statusMessage: redactSensitiveLogText(
-        duitkuData.statusMessage ?? duitkuData.Message
-      ),
-    });
-    return Response.json(
-      {
-        success: false,
-        code: "DUITKU_REQUEST_FAILED",
-        message: "Gagal membuat transaksi Duitku.",
-        detail: getSafeStatusMessage(duitkuData),
-        duitkuResponse: duitkuData,
-      },
-      { status: duitkuResponse.ok ? 400 : 500 }
-    );
   } catch (reason) {
     logDuitkuError({
       code: "UNKNOWN_ERROR",
@@ -734,6 +734,7 @@ export async function POST(request: Request) {
     flushTimingSummary("response_error", {
       message: reason instanceof Error ? reason.message : String(reason),
     });
+
     return Response.json(
       {
         success: false,
