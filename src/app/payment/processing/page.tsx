@@ -334,6 +334,15 @@ function getPaymentRedirectUrl(transaction: DuitkuCreateTransactionResponse) {
   return null;
 }
 
+function getPreparedPaymentUrl(preparedPayment: PreparedPayment) {
+  return (
+    preparedPayment.paymentUrl ??
+    (preparedPayment.response
+      ? getPaymentRedirectUrl(preparedPayment.response)
+      : null)
+  );
+}
+
 function updateStoredPaymentInvoice(
   payload: PendingPaymentPayload,
   transaction: DuitkuCreateTransactionResponse,
@@ -376,7 +385,7 @@ export default function PaymentProcessingPage() {
   const [loadingStatus, setLoadingStatus] = useState("Menghubungkan ke Duitku...");
   const [payload, setPayload] = useState<PendingPaymentPayload | null>(null);
   const [isRequestInFlight, setIsRequestInFlight] = useState(false);
-  const hasStartedRef = useRef(false);
+  const hasStartedRequestRef = useRef(false);
   const requestInFlightRef = useRef(false);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -432,6 +441,17 @@ export default function PaymentProcessingPage() {
       };
 
       writePreparedPayment(pendingPreparedPayment);
+      console.info("[PAYMENT PROCESSING] fallback_request_started", {
+        payloadHash,
+        orderId: pendingPayment.orderId,
+        invoiceId: pendingPayment.invoiceId,
+      });
+      console.info("[PAYMENT PREP] started", {
+        payloadHash,
+        orderId: pendingPayment.orderId,
+        invoiceId: pendingPayment.invoiceId,
+        source: "processing",
+      });
 
       try {
         const response = await fetch("/api/duitku/create-transaction", {
@@ -456,6 +476,14 @@ export default function PaymentProcessingPage() {
             createdAt: Date.now(),
           });
 
+          console.info("[PAYMENT PREP] failed", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            code: transaction.code,
+            source: "processing",
+          });
+
           setErrorMessage(nextErrorMessage);
           setState("error");
           requestInFlightRef.current = false;
@@ -477,6 +505,14 @@ export default function PaymentProcessingPage() {
             createdAt: Date.now(),
           });
 
+          console.info("[PAYMENT PREP] failed", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            reason: "missing_payment_url",
+            source: "processing",
+          });
+
           setErrorMessage(
             nextErrorMessage
           );
@@ -494,6 +530,13 @@ export default function PaymentProcessingPage() {
           createdAt: Date.now(),
         });
 
+        console.info("[PAYMENT PREP] ready", {
+          payloadHash,
+          orderId: pendingPayment.orderId,
+          invoiceId: pendingPayment.invoiceId,
+          source: "processing",
+        });
+
         redirectToPayment(pendingPayment, paymentUrl, transaction);
       } catch {
         const nextErrorMessage =
@@ -504,6 +547,14 @@ export default function PaymentProcessingPage() {
           status: "failed",
           error: nextErrorMessage,
           createdAt: Date.now(),
+        });
+
+        console.info("[PAYMENT PREP] failed", {
+          payloadHash,
+          orderId: pendingPayment.orderId,
+          invoiceId: pendingPayment.invoiceId,
+          reason: "network_error",
+          source: "processing",
         });
 
         setErrorMessage(nextErrorMessage);
@@ -536,11 +587,7 @@ export default function PaymentProcessingPage() {
         const preparedPayment = readPreparedPayment();
 
         if (preparedPayment?.payloadHash === payloadHash) {
-          const paymentUrl =
-            preparedPayment.paymentUrl ??
-            (preparedPayment.response
-              ? getPaymentRedirectUrl(preparedPayment.response)
-              : null);
+          const paymentUrl = getPreparedPaymentUrl(preparedPayment);
 
           if (preparedPayment.status === "ready" && paymentUrl) {
             redirectToPayment(
@@ -588,13 +635,15 @@ export default function PaymentProcessingPage() {
       const preparedPayment = readPreparedPayment();
 
       if (preparedPayment?.payloadHash === payloadHash) {
-        const paymentUrl =
-          preparedPayment.paymentUrl ??
-          (preparedPayment.response
-            ? getPaymentRedirectUrl(preparedPayment.response)
-            : null);
+        const paymentUrl = getPreparedPaymentUrl(preparedPayment);
 
         if (preparedPayment.status === "ready" && paymentUrl) {
+          console.info("[PAYMENT PREP] skipped_existing_ready", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+            source: "processing",
+          });
           redirectToPayment(
             pendingPayment,
             paymentUrl,
@@ -604,6 +653,11 @@ export default function PaymentProcessingPage() {
         }
 
         if (preparedPayment.status === "pending") {
+          console.info("[PAYMENT PROCESSING] waiting_existing_pending", {
+            payloadHash,
+            orderId: pendingPayment.orderId,
+            invoiceId: pendingPayment.invoiceId,
+          });
           waitForPreparedPayment(pendingPayment, payloadHash);
           return;
         }
@@ -624,11 +678,11 @@ export default function PaymentProcessingPage() {
   );
 
   useEffect(() => {
-    if (hasStartedRef.current) {
+    if (hasStartedRequestRef.current) {
       return;
     }
 
-    hasStartedRef.current = true;
+    hasStartedRequestRef.current = true;
 
     queueMicrotask(() => {
       const pendingPayment = readPendingPaymentPayload();
