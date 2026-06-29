@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Invoice, PaymentMethod } from "@/lib/invoice";
 import { getStoredInvoice, saveInvoice } from "@/lib/invoice-storage";
 
-type EWalletProvider = "ovo" | "shopeepay" | "linkaja";
+type EWalletProvider = "ovo" | "shopeepay" | "linkaja" | "dana";
 
 interface PendingPaymentPayload {
   planId: string;
@@ -101,6 +101,7 @@ const ewalletProviders: readonly EWalletProvider[] = [
   "ovo",
   "shopeepay",
   "linkaja",
+  "dana",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -183,6 +184,14 @@ function getPendingPaymentPayloadHash(payload: PendingPaymentPayload) {
     orderId: payload.orderId,
     notes: payload.notes ?? "",
   });
+}
+
+function getPendingPaymentPayloadError(payload: PendingPaymentPayload) {
+  if (payload.paymentMethod !== "ewallet" || payload.ewalletProvider) {
+    return "";
+  }
+
+  return "Data pembayaran e-wallet belum lengkap karena provider belum tersimpan. Kembali ke checkout lalu pilih OVO, ShopeePay, LinkAja, atau DANA sebelum mencoba lagi.";
 }
 
 function parseDuitkuCreateTransactionResponse(
@@ -300,6 +309,14 @@ function readPendingPaymentPayload() {
   }
 }
 
+function clearPreparedPayment() {
+  try {
+    window.sessionStorage.removeItem(preparedPaymentStorageKey);
+  } catch {
+    // Ignore browser storage failure.
+  }
+}
+
 function readPreparedPayment() {
   try {
     const raw = window.sessionStorage.getItem(preparedPaymentStorageKey);
@@ -325,8 +342,13 @@ function readPreparedPayment() {
       return null;
     }
 
+    if (getPendingPaymentPayloadError(payload)) {
+      clearPreparedPayment();
+      return null;
+    }
+
     if (Date.now() - parsed.createdAt > preparedPaymentMaxAgeMs) {
-      window.sessionStorage.removeItem(preparedPaymentStorageKey);
+      clearPreparedPayment();
       return null;
     }
 
@@ -605,6 +627,18 @@ export default function PaymentProcessingPage() {
       pendingPayment: PendingPaymentPayload,
       payloadHash = getPendingPaymentPayloadHash(pendingPayment)
     ) => {
+      const payloadError = getPendingPaymentPayloadError(pendingPayment);
+
+      if (payloadError) {
+        clearPreparedPayment();
+        setPayload(pendingPayment);
+        setErrorMessage(payloadError);
+        setState("error");
+        requestInFlightRef.current = false;
+        setIsRequestInFlight(false);
+        return;
+      }
+
       if (requestInFlightRef.current) {
         return;
       }
@@ -726,6 +760,15 @@ export default function PaymentProcessingPage() {
 
   const startPaymentFlow = useCallback(
     (pendingPayment: PendingPaymentPayload) => {
+      const payloadError = getPendingPaymentPayloadError(pendingPayment);
+
+      if (payloadError) {
+        clearPreparedPayment();
+        setErrorMessage(payloadError);
+        setState("error");
+        return;
+      }
+
       const payloadHash = getPendingPaymentPayloadHash(pendingPayment);
       const preparedPayment = readPreparedPayment();
 
@@ -796,6 +839,16 @@ export default function PaymentProcessingPage() {
     }
 
     setPayload(pendingPayment);
+
+    const payloadError = getPendingPaymentPayloadError(pendingPayment);
+
+    if (payloadError) {
+      clearPreparedPayment();
+      setErrorMessage(payloadError);
+      setState("error");
+      return;
+    }
+
     void submitPendingPayment(
       pendingPayment,
       getPendingPaymentPayloadHash(pendingPayment)

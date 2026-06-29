@@ -69,7 +69,7 @@ function getPaymentCode(...codes: (string | undefined)[]) {
 export function mapPaymentMethodToDuitkuCode(
   paymentMethod: PaymentMethod,
   ewalletProvider?: EWalletProvider
-) {
+): string | null {
   switch (paymentMethod) {
     case "virtual_account":
       return getPaymentCode(process.env.DUITKU_VA_PAYMENT_CODE, "BC");
@@ -84,11 +84,7 @@ export function mapPaymentMethodToDuitkuCode(
 
       switch (ewalletProvider) {
         case "ovo":
-          return getPaymentCode(
-            process.env.DUITKU_OVO_PAYMENT_CODE,
-            process.env.DUITKU_EWALLET_PAYMENT_CODE,
-            "OV"
-          );
+          return getPaymentCode(process.env.DUITKU_OVO_PAYMENT_CODE, "OV");
 
         case "shopeepay":
           return getPaymentCode(process.env.DUITKU_SHOPEEPAY_PAYMENT_CODE, "SA");

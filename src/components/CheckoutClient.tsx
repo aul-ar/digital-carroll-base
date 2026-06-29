@@ -266,7 +266,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         throw new Error("Checkout plan is not available.");
       }
 
-      return {
+      const payload: PendingAutomaticPaymentPayload = {
         planId: selectedPlan.id,
         customerName: invoice.customerName,
         customerEmail: invoice.customerEmail,
@@ -276,12 +276,22 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         packageDescription: invoice.packageDescription,
         amount: invoice.total,
         paymentMethod: method,
-        ...(method === "ewallet" && ewalletProvider
-          ? { ewalletProvider }
-          : {}),
         invoiceId: invoice.invoiceId,
         orderId: invoice.orderId,
         notes: invoice.notes,
+      };
+
+      if (method !== "ewallet") {
+        return payload;
+      }
+
+      if (!ewalletProvider) {
+        throw new Error("E-wallet provider is required.");
+      }
+
+      return {
+        ...payload,
+        ewalletProvider,
       };
     },
     [selectedPlan]
@@ -418,7 +428,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     }
 
     if (selectedPaymentMethod === "ewallet") {
-      const selectedProvider = getSelectedEWalletProviderFromForm(form);
+      const selectedProvider =
+        getSelectedEWalletProviderFromForm(form) ?? selectedEWalletProvider;
 
       if (!selectedProvider) {
         setPaymentError("Silakan pilih provider e-wallet terlebih dahulu.");
@@ -447,7 +458,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
     try {
       const selectedProvider =
-        method === "ewallet" ? getSelectedEWalletProviderFromForm(form) : null;
+        method === "ewallet"
+          ? getSelectedEWalletProviderFromForm(form) ?? selectedEWalletProvider
+          : null;
 
       if (method === "ewallet" && !selectedProvider) {
         setPaymentError("Silakan pilih provider e-wallet terlebih dahulu.");

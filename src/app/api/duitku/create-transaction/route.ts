@@ -65,10 +65,10 @@ function normalizeEWalletProvider(
     ewalletProvider === ""
   ) {
     return {
-    valid: false,
-    message:
-      "Provider e-wallet wajib dipilih. Pilih salah satu: ovo, shopeepay, linkaja, atau dana.",
-  };
+      valid: false,
+      message:
+        "Provider e-wallet wajib dipilih. Pilih salah satu: ovo, shopeepay, linkaja, atau dana.",
+    };
   }
 
   if (isEWalletProvider(ewalletProvider)) {
@@ -398,6 +398,15 @@ export async function POST(request: Request) {
       duitkuPaymentMethodCode,
     });
 
+    console.info("[DUITKU] payment_code_resolved", {
+      paymentMethod: payload.paymentMethod,
+      ewalletProvider: payload.ewalletProvider ?? null,
+      duitkuPaymentMethodCode,
+      merchantOrderId,
+      invoiceId: payload.invoiceId,
+      orderId: payload.orderId,
+    });
+
     logTiming("database_start");
 
     const orderData = {
@@ -596,6 +605,7 @@ export async function POST(request: Request) {
     } else {
       console.info("DUITKU REQUEST SUMMARY:", {
         paymentMethod: duitkuPayload.paymentMethod,
+        ewalletProvider: payload.ewalletProvider ?? null,
         merchantOrderId: duitkuPayload.merchantOrderId,
         invoiceId: duitkuPayload.additionalParam,
         itemCount: duitkuPayload.itemDetails.length,
@@ -616,6 +626,7 @@ export async function POST(request: Request) {
           merchantOrderId,
           invoiceId: payload.invoiceId,
           paymentMethod: duitkuPaymentMethodCode,
+          ewalletProvider: payload.ewalletProvider ?? null,
         });
 
         const duitkuResponse = await fetch(
@@ -640,6 +651,7 @@ export async function POST(request: Request) {
           invoiceId: payload.invoiceId,
           httpStatus: duitkuResponse.status,
           statusCode: duitkuData.statusCode ?? null,
+          ewalletProvider: payload.ewalletProvider ?? null,
           elapsedMs: Date.now() - providerStartedAt,
           hasPaymentUrl: Boolean(duitkuData.paymentUrl),
           hasReference: Boolean(duitkuData.reference),
