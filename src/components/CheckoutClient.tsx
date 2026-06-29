@@ -157,8 +157,19 @@ function isAutomaticPaymentActive(
   );
 }
 
+function isEWalletProvider(value: unknown): value is EWalletProvider {
+  return (
+    value === "ovo" ||
+    value === "shopeepay" ||
+    value === "linkaja" ||
+    value === "dana"
+  );
+}
+
 function writePendingPaymentPayload(payload: PendingAutomaticPaymentPayload) {
   try {
+    window.sessionStorage.removeItem(preparedPaymentStorageKey);
+    window.sessionStorage.removeItem(pendingPaymentStorageKey);
     window.sessionStorage.setItem(
       pendingPaymentStorageKey,
       JSON.stringify(payload)
@@ -169,12 +180,26 @@ function writePendingPaymentPayload(payload: PendingAutomaticPaymentPayload) {
   }
 }
 
-function clearPreparedPaymentCache() {
+function clearPaymentSession() {
   try {
     window.sessionStorage.removeItem(preparedPaymentStorageKey);
+    window.sessionStorage.removeItem(pendingPaymentStorageKey);
   } catch {
-    // Session storage failure should not block checkout.
+    // Ignore browser storage failure.
   }
+}
+
+function getSelectedEWalletProviderFromForm(
+  form: HTMLFormElement
+): EWalletProvider | null {
+  const formData = new FormData(form);
+  const provider = formData.get("ewalletProvider");
+
+  if (isEWalletProvider(provider)) {
+    return provider;
+  }
+
+  return null;
 }
 
 export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
@@ -356,7 +381,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     setCustomer((current) => ({ ...current, [field]: value }));
     setError("");
     setPaymentError("");
-    clearPreparedPaymentCache();
+    clearPaymentSession();
   }
 
   function validateForm() {
@@ -379,7 +404,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     return "";
   }
 
-  function validateCheckout() {
+  function validateCheckout(form: HTMLFormElement) {
     const validationMessage = validateForm();
 
     if (validationMessage) {
@@ -390,6 +415,15 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     if (!selectedPaymentMethod) {
       setPaymentError("Silakan pilih metode pembayaran terlebih dahulu.");
       return false;
+    }
+
+    if (selectedPaymentMethod === "ewallet") {
+      const selectedProvider = getSelectedEWalletProviderFromForm(form);
+
+      if (!selectedProvider) {
+        setPaymentError("Silakan pilih provider e-wallet terlebih dahulu.");
+        return false;
+      }
     }
 
     if (!hasCheckoutAmount) {
@@ -404,24 +438,33 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     return true;
   }
 
-  function handleAutomaticPayment(method: PaymentMethod) {
+  function handleAutomaticPayment(
+    method: PaymentMethod,
+    form: HTMLFormElement
+  ) {
     setIsProcessing(true);
-    clearPreparedPaymentCache();
+    clearPaymentSession();
 
     try {
-      const providerSnapshot =
-        method === "ewallet" ? selectedEWalletProvider : undefined;
+      const selectedProvider =
+        method === "ewallet" ? getSelectedEWalletProviderFromForm(form) : null;
+
+      if (method === "ewallet" && !selectedProvider) {
+        setPaymentError("Silakan pilih provider e-wallet terlebih dahulu.");
+        setIsProcessing(false);
+        return;
+      }
 
       const invoice = createPendingInvoice(method);
       const pendingPayment = buildPendingPaymentPayload(
         invoice,
         method,
-        providerSnapshot
+        selectedProvider ?? undefined
       );
 
       console.info("[PAYMENT SUBMIT] selected_payment", {
         paymentMethod: method,
-        ewalletProvider: providerSnapshot ?? null,
+        ewalletProvider: selectedProvider ?? null,
         orderId: pendingPayment.orderId,
         invoiceId: pendingPayment.invoiceId,
       });
@@ -441,7 +484,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
   function handleManualPayment(method: PaymentMethod) {
     setIsProcessing(true);
-    clearPreparedPaymentCache();
+    clearPaymentSession();
 
     const invoice = createPendingInvoice(method);
     const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${checkoutPlan.name}. Nama saya ${customer.fullName}.`;
@@ -458,7 +501,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!validateCheckout()) {
+    const form = event.currentTarget;
+
+    if (!validateCheckout(form)) {
       return;
     }
 
@@ -478,7 +523,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       return;
     }
 
-    handleAutomaticPayment(method);
+    handleAutomaticPayment(method, form);
   }
 
   function renderPaymentCard(option: PaymentOption) {
@@ -507,7 +552,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           onClick={() => {
             setSelectedPaymentMethod(option.id);
             setPaymentError("");
-            clearPreparedPaymentCache();
+            clearPaymentSession();
 
             if (option.id !== "ewallet") {
               setSelectedEWalletProvider("ovo");
@@ -589,7 +634,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
                         setSelectedPaymentMethod("ewallet");
                         setSelectedEWalletProvider(provider.id);
                         setPaymentError("");
-                        clearPreparedPaymentCache();
+                        clearPaymentSession();
 
                         console.info("[PAYMENT UI] ewallet_provider_selected", {
                           ewalletProvider: provider.id,
