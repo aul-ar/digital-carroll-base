@@ -90,7 +90,7 @@ export function mapPaymentMethodToDuitkuCode(
           return getPaymentCode(process.env.DUITKU_SHOPEEPAY_PAYMENT_CODE, "SA");
 
         case "linkaja":
-          return getPaymentCode(process.env.DUITKU_LINKAJA_PAYMENT_CODE, "LF");
+          return getPaymentCode(process.env.DUITKU_LINKAJA_PAYMENT_CODE, "LA");
 
         case "dana":
           return getPaymentCode(process.env.DUITKU_DANA_PAYMENT_CODE, "DA");
@@ -252,3 +252,4 @@ export function validateDuitkuRequestPayload(
     message: "Payload valid.",
   };
 }
+
