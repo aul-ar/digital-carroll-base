@@ -3,7 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { PaymentMethod } from "@/lib/invoice";
 
-export type EWalletProvider = "ovo" | "shopeepay" | "linkaja";
+export type EWalletProvider = "ovo" | "shopeepay" | "linkaja" | "dana";
 
 export interface DuitkuTransactionPayload {
   customerName: string;
@@ -44,6 +44,7 @@ const ewalletProviders: readonly EWalletProvider[] = [
   "ovo",
   "shopeepay",
   "linkaja",
+  "dana",
 ];
 
 export function isEWalletProvider(value: unknown): value is EWalletProvider {
@@ -53,9 +54,7 @@ export function isEWalletProvider(value: unknown): value is EWalletProvider {
   );
 }
 
-function getPaymentCode(
-  ...codes: (string | undefined)[]
-) {
+function getPaymentCode(...codes: (string | undefined)[]) {
   for (const code of codes) {
     const normalizedCode = code?.trim();
 
@@ -73,15 +72,11 @@ export function mapPaymentMethodToDuitkuCode(
 ) {
   switch (paymentMethod) {
     case "virtual_account":
-      return getPaymentCode(
-        process.env.DUITKU_VA_PAYMENT_CODE,
-        "BC"
-      );
+      return getPaymentCode(process.env.DUITKU_VA_PAYMENT_CODE, "BC");
+
     case "qris":
-      return getPaymentCode(
-        process.env.DUITKU_QRIS_PAYMENT_CODE,
-        "SQ"
-      );
+      return getPaymentCode(process.env.DUITKU_QRIS_PAYMENT_CODE, "SQ");
+
     case "ewallet":
       switch (ewalletProvider) {
         case "ovo":
@@ -90,19 +85,20 @@ export function mapPaymentMethodToDuitkuCode(
             process.env.DUITKU_EWALLET_PAYMENT_CODE,
             "OV"
           );
+
         case "shopeepay":
-          return getPaymentCode(
-            process.env.DUITKU_SHOPEEPAY_PAYMENT_CODE,
-            "SA"
-          );
+          return getPaymentCode(process.env.DUITKU_SHOPEEPAY_PAYMENT_CODE, "SA");
+
         case "linkaja":
-          return getPaymentCode(
-            process.env.DUITKU_LINKAJA_PAYMENT_CODE,
-            "LF"
-          );
+          return getPaymentCode(process.env.DUITKU_LINKAJA_PAYMENT_CODE, "LF");
+
+        case "dana":
+          return getPaymentCode(process.env.DUITKU_DANA_PAYMENT_CODE, "DA");
+
         default:
           return null;
       }
+
     default:
       return null;
   }
@@ -147,9 +143,7 @@ export function buildDuitkuCreateInvoiceSignature(input: {
 }) {
   return crypto
     .createHmac("sha256", input.apiKey)
-    .update(
-      `${input.merchantCode}${input.timestamp}`
-    )
+    .update(`${input.merchantCode}${input.timestamp}`)
     .digest("hex");
 }
 
@@ -161,15 +155,11 @@ export function buildDuitkuCallbackSignature(input: {
 }) {
   return crypto
     .createHmac("sha256", input.apiKey)
-    .update(
-      `${input.merchantCode}${input.amount}${input.merchantOrderId}`
-    )
+    .update(`${input.merchantCode}${input.amount}${input.merchantOrderId}`)
     .digest("hex");
 }
 
-export function normalizePhoneNumber(
-  phoneNumber: string
-) {
+export function normalizePhoneNumber(phoneNumber: string) {
   const digits = phoneNumber.replace(/\D/g, "");
 
   if (digits.startsWith("62")) {
@@ -186,38 +176,29 @@ export function normalizePhoneNumber(
 export function validateDuitkuRequestPayload(
   payload: Partial<DuitkuTransactionPayload>
 ) {
-  const requiredFields: (keyof DuitkuTransactionPayload)[] =
-    [
-      "customerName",
-      "customerEmail",
-      "customerWhatsapp",
-      "packageName",
-      "packageDescription",
-      "amount",
-      "paymentMethod",
-      "invoiceId",
-      "orderId",
-    ];
+  const requiredFields: (keyof DuitkuTransactionPayload)[] = [
+    "customerName",
+    "customerEmail",
+    "customerWhatsapp",
+    "packageName",
+    "packageDescription",
+    "amount",
+    "paymentMethod",
+    "invoiceId",
+    "orderId",
+  ];
 
-  const missingFields = requiredFields.filter(
-    (field) => {
-      const value = payload[field];
+  const missingFields = requiredFields.filter((field) => {
+    const value = payload[field];
 
-      return (
-        value === undefined ||
-        value === null ||
-        value === ""
-      );
-    }
-  );
+    return value === undefined || value === null || value === "";
+  });
 
   if (missingFields.length > 0) {
     return {
       valid: false,
       code: "VALIDATION_ERROR",
-      message: `Field wajib belum lengkap: ${missingFields.join(
-        ", "
-      )}.`,
+      message: `Field wajib belum lengkap: ${missingFields.join(", ")}.`,
     };
   }
 
@@ -229,16 +210,13 @@ export function validateDuitkuRequestPayload(
     return {
       valid: false,
       code: "VALIDATION_ERROR",
-      message:
-        "Amount harus berupa number dan lebih besar dari 0.",
+      message: "Amount harus berupa number dan lebih besar dari 0.",
     };
   }
 
   if (
-    payload.paymentMethod ===
-      "bank_transfer_manual" ||
-    payload.paymentMethod ===
-      "ewallet_manual"
+    payload.paymentMethod === "bank_transfer_manual" ||
+    payload.paymentMethod === "ewallet_manual"
   ) {
     return {
       valid: false,
@@ -256,7 +234,7 @@ export function validateDuitkuRequestPayload(
       valid: false,
       code: "VALIDATION_ERROR",
       message:
-        "Provider e-wallet harus salah satu dari ovo, shopeepay, atau linkaja.",
+        "Provider e-wallet harus salah satu dari ovo, shopeepay, linkaja, atau dana.",
     };
   }
 

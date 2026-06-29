@@ -1,11 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CreditCard, Landmark, QrCode, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CreditCard,
+  Landmark,
+  QrCode,
+  Wallet,
+} from "lucide-react";
 import { pricingPlans } from "@/data/pricing";
-import { createInvoiceData, formatCurrency, parsePackagePrice, PaymentMethod, type Invoice } from "@/lib/invoice";
+import {
+  createInvoiceData,
+  formatCurrency,
+  parsePackagePrice,
+  PaymentMethod,
+  type Invoice,
+} from "@/lib/invoice";
 import type { EWalletProvider } from "@/lib/duitku";
 import { getStoredInvoice, saveInvoice } from "@/lib/invoice-storage";
 import { getWhatsAppLink } from "@/utils/whatsapp";
@@ -90,6 +110,7 @@ const preparedPaymentStorageKey = "digital-carroll-base:prepared-payment";
 const preparedPaymentMaxAgeMs = 8 * 60 * 1000;
 const preparedPaymentPendingReuseMs = 2 * 60 * 1000;
 const backgroundPrepareDebounceMs = 1000;
+
 const paymentMethods: readonly PaymentMethod[] = [
   "virtual_account",
   "qris",
@@ -97,16 +118,19 @@ const paymentMethods: readonly PaymentMethod[] = [
   "bank_transfer_manual",
   "ewallet_manual",
 ];
+
 const ewalletProviders: readonly EWalletProvider[] = [
   "ovo",
   "shopeepay",
   "linkaja",
+  "dana",
 ];
 
 const ewalletProviderOptions: EWalletProviderOption[] = [
   { id: "ovo", label: "OVO" },
   { id: "shopeepay", label: "ShopeePay" },
   { id: "linkaja", label: "LinkAja" },
+  { id: "dana", label: "DANA" },
 ];
 
 const automaticPaymentOptions: PaymentOption[] = [
@@ -130,7 +154,7 @@ const automaticPaymentOptions: PaymentOption[] = [
     id: "ewallet",
     title: "E-Wallet",
     description:
-      "Bayar menggunakan OVO, ShopeePay, atau LinkAja melalui sistem pembayaran otomatis Duitku.",
+      "Bayar menggunakan OVO, ShopeePay, LinkAja, atau DANA melalui sistem pembayaran otomatis Duitku.",
     icon: Wallet,
     badgeLabel: "Duitku",
     disabled: false,
@@ -269,6 +293,7 @@ function parseDuitkuCreateTransactionResponse(
   const transaction: DuitkuCreateTransactionResponse = {
     success: value.success,
   };
+
   const code = optionalString(value.code);
   const message = optionalString(value.message);
   const detail = optionalString(value.detail);
@@ -398,7 +423,8 @@ function readPreparedPayment() {
     }
 
     const parsed: unknown = JSON.parse(raw);
-        if (
+
+    if (
       !isRecord(parsed) ||
       typeof parsed.payloadHash !== "string" ||
       !isPreparedPaymentStatus(parsed.status) ||
@@ -454,7 +480,9 @@ function getDuitkuErrorMessage(
   }
 
   if (code === "INVALID_PAYMENT_METHOD") {
-    return serverMessage || "Metode pembayaran ini belum aktif di Duitku Production.";
+    return (
+      serverMessage || "Metode pembayaran ini belum aktif di Duitku Production."
+    );
   }
 
   if (code === "DUITKU_REQUEST_FAILED") {
@@ -547,11 +575,11 @@ function isManualPayment(method: PaymentMethod | "") {
   return method === "bank_transfer_manual" || method === "ewallet_manual";
 }
 
-function isAutomaticPaymentActive(method: PaymentMethod | ""): method is PaymentMethod {
+function isAutomaticPaymentActive(
+  method: PaymentMethod | ""
+): method is PaymentMethod {
   return (
-    method === "virtual_account" ||
-    method === "qris" ||
-    method === "ewallet"
+    method === "virtual_account" || method === "qris" || method === "ewallet"
   );
 }
 
@@ -561,14 +589,18 @@ interface CheckoutClientProps {
 
 export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const router = useRouter();
+
   const selectedPlan = useMemo(
     () => pricingPlans.find((plan) => plan.id === initialPlanId) ?? null,
     [initialPlanId]
   );
 
   const [customer, setCustomer] = useState<CheckoutCustomer>(initialCustomer);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | "">("");
-  const [selectedEWalletProvider, setSelectedEWalletProvider] = useState<EWalletProvider>("ovo");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    PaymentMethod | ""
+  >("");
+  const [selectedEWalletProvider, setSelectedEWalletProvider] =
+    useState<EWalletProvider>("ovo");
   const [error, setError] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -576,6 +608,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   const [preparedPaymentStatus, setPreparedPaymentStatus] = useState<
     PreparedPaymentStatus | "idle"
   >("idle");
+
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activePayloadHashRef = useRef<string | null>(null);
   const activeRequestRef = useRef<Promise<void> | null>(null);
@@ -617,13 +650,16 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       customer.fullName,
       customer.notes,
       customer.whatsapp,
-            selectedAmount,
+      selectedAmount,
       selectedPlan,
     ]
   );
 
   const buildPendingPaymentPayload = useCallback(
-    (invoice: Invoice, method: PaymentMethod): PendingAutomaticPaymentPayload => {
+    (
+      invoice: Invoice,
+      method: PaymentMethod
+    ): PendingAutomaticPaymentPayload => {
       if (!selectedPlan) {
         throw new Error("Checkout plan is not available.");
       }
@@ -638,7 +674,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         packageDescription: invoice.packageDescription,
         amount: invoice.total,
         paymentMethod: invoice.paymentMethod,
-        ...(method === "ewallet" ? { ewalletProvider: selectedEWalletProvider } : {}),
+        ...(method === "ewallet"
+          ? { ewalletProvider: selectedEWalletProvider }
+          : {}),
         invoiceId: invoice.invoiceId,
         orderId: invoice.orderId,
         notes: invoice.notes,
@@ -666,7 +704,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         pendingPayment.packageDescription === selectedPlan.description &&
         pendingPayment.amount === selectedAmount &&
         pendingPayment.paymentMethod === method &&
-        (pendingPayment.ewalletProvider ?? undefined) === expectedEWalletProvider &&
+        (pendingPayment.ewalletProvider ?? undefined) ===
+          expectedEWalletProvider &&
         (pendingPayment.notes ?? "") === customer.notes
       );
     },
@@ -711,9 +750,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
       if (
         existingPreparedPayment &&
-        isPreparedPaymentForCurrentCheckout(existingPreparedPayment.payload, method)
+        isPreparedPaymentForCurrentCheckout(
+          existingPreparedPayment.payload,
+          method
+        )
       ) {
-        const existingPaymentUrl = getPreparedPaymentUrl(existingPreparedPayment);
+        const existingPaymentUrl =
+          getPreparedPaymentUrl(existingPreparedPayment);
 
         if (
           existingPreparedPayment.status === "pending" &&
@@ -721,22 +764,26 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             preparedPaymentPendingReuseMs
         ) {
           activePayloadHashRef.current = existingPreparedPayment.payloadHash;
+
           console.info("[PAYMENT PREP] skipped_existing_pending", {
             payloadHash: existingPreparedPayment.payloadHash,
             orderId: existingPreparedPayment.payload.orderId,
             invoiceId: existingPreparedPayment.payload.invoiceId,
           });
+
           setPreparedPaymentStatus("pending");
           return;
         }
 
         if (existingPreparedPayment.status === "ready" && existingPaymentUrl) {
           activePayloadHashRef.current = existingPreparedPayment.payloadHash;
+
           console.info("[PAYMENT PREP] skipped_existing_ready", {
             payloadHash: existingPreparedPayment.payloadHash,
             orderId: existingPreparedPayment.payload.orderId,
             invoiceId: existingPreparedPayment.payload.invoiceId,
           });
+
           setPreparedPaymentStatus("ready");
           return;
         }
@@ -759,6 +806,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             orderId: pendingPayment.orderId,
             invoiceId: pendingPayment.invoiceId,
           });
+
           setPreparedPaymentStatus("pending");
           return;
         }
@@ -774,11 +822,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           Date.now() - preparedPayment.createdAt < preparedPaymentPendingReuseMs
         ) {
           activePayloadHashRef.current = payloadHash;
+
           console.info("[PAYMENT PREP] skipped_existing_pending", {
             payloadHash,
             orderId: pendingPayment.orderId,
             invoiceId: pendingPayment.invoiceId,
           });
+
           setPreparedPaymentStatus("pending");
           return;
         }
@@ -789,11 +839,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           preparedPaymentUrl
         ) {
           activePayloadHashRef.current = payloadHash;
+
           console.info("[PAYMENT PREP] skipped_existing_ready", {
             payloadHash,
             orderId: pendingPayment.orderId,
             invoiceId: pendingPayment.invoiceId,
           });
+
           setPreparedPaymentStatus("ready");
           return;
         }
@@ -824,6 +876,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(pendingPayment),
           });
+
           const transaction = await readTransactionResponse(response);
 
           if (!response.ok || !transaction.success) {
@@ -970,10 +1023,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         }
       }
     },
-    [
-      getOrCreatePendingAutomaticPayment,
-      isPreparedPaymentForCurrentCheckout,
-    ]
+    [getOrCreatePendingAutomaticPayment, isPreparedPaymentForCurrentCheckout]
   );
 
   useEffect(() => {
@@ -1017,7 +1067,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 shadow-sm dark:border-red-900 dark:bg-red-950/25 dark:text-red-200 sm:p-6">
         <h2 className="text-lg font-bold">Paket checkout tidak ditemukan</h2>
         <p className="mt-2 leading-relaxed">
-          Silakan pilih paket dari halaman harga agar nama paket, deskripsi, dan nominal pembayaran sesuai data terbaru.
+          Silakan pilih paket dari halaman harga agar nama paket, deskripsi, dan
+          nominal pembayaran sesuai data terbaru.
         </p>
         <Link
           href="/harga"
@@ -1038,9 +1089,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
     return (
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm dark:border-amber-900 dark:bg-amber-950/25 sm:p-6">
-          <h2 className="text-lg font-bold text-slate-950 dark:text-white">Paket Perlu Konsultasi</h2>
+          <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+            Paket Perlu Konsultasi
+          </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-            Paket ini belum memiliki nominal tetap, jadi tidak akan dikirim ke Duitku. Silakan konsultasi dulu agar tim Digital Carroll Base dapat menentukan scope dan estimasi biaya yang tepat.
+            Paket ini belum memiliki nominal tetap, jadi tidak akan dikirim ke
+            Duitku. Silakan konsultasi dulu agar tim Digital Carroll Base dapat
+            menentukan scope dan estimasi biaya yang tepat.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a
@@ -1063,18 +1118,30 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         </section>
 
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-28">
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Ringkasan Pesanan</p>
-          <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{selectedPlan.name}</h2>
-          <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{selectedPlan.description}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            Ringkasan Pesanan
+          </p>
+          <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">
+            {selectedPlan.name}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {selectedPlan.description}
+          </p>
 
           <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
             <div className="flex justify-between gap-4">
-              <span className="text-slate-500 dark:text-slate-400">Plan ID</span>
-              <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{selectedPlan.id}</span>
+              <span className="text-slate-500 dark:text-slate-400">
+                Plan ID
+              </span>
+              <span className="text-right font-semibold text-slate-800 dark:text-slate-100">
+                {selectedPlan.id}
+              </span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-slate-500 dark:text-slate-400">Harga</span>
-              <span className="text-right font-extrabold text-slate-950 dark:text-white">{selectedPlan.price}</span>
+              <span className="text-right font-extrabold text-slate-950 dark:text-white">
+                {selectedPlan.price}
+              </span>
             </div>
           </div>
         </aside>
@@ -1117,13 +1184,16 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       setError(validationMessage);
       return false;
     }
-        if (!selectedPaymentMethod) {
+
+    if (!selectedPaymentMethod) {
       setPaymentError("Silakan pilih metode pembayaran terlebih dahulu.");
       return false;
     }
 
     if (!hasCheckoutAmount) {
-      setPaymentError("Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi via WhatsApp.");
+      setPaymentError(
+        "Paket ini belum memiliki nominal pembayaran otomatis. Silakan konsultasi via WhatsApp."
+      );
       return false;
     }
 
@@ -1154,6 +1224,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             orderId: pendingPayment.orderId,
             invoiceId: pendingPayment.invoiceId,
           });
+
           window.location.assign(paymentUrl);
           return;
         }
@@ -1174,10 +1245,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
   function handleManualPayment(method: PaymentMethod) {
     setIsProcessing(true);
+
     const invoice = createPendingInvoice(method);
     const message = `Halo Digital Carroll Base, saya ingin konfirmasi pembayaran untuk pesanan ${checkoutPlan.name}. Nama saya ${customer.fullName}.`;
+
     setManualInvoiceId(invoice.invoiceId);
     window.open(getWhatsAppLink(message), "_blank", "noopener,noreferrer");
+
     window.setTimeout(() => {
       setIsProcessing(false);
       router.push(`/invoice/${invoice.invoiceId}`);
@@ -1213,7 +1287,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
   function renderPaymentCard(option: PaymentOption) {
     const Icon = option.icon;
     const selected = selectedPaymentMethod === option.id;
-    const badgeLabel = option.badgeLabel ?? (isManualPayment(option.id) ? "Manual" : "Duitku");
+    const badgeLabel =
+      option.badgeLabel ?? (isManualPayment(option.id) ? "Manual" : "Duitku");
     const badgeClassName = option.disabled
       ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
       : isManualPayment(option.id)
@@ -1223,8 +1298,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       option.disabled
         ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75 dark:border-slate-800 dark:bg-slate-900"
         : selected
-        ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
-        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
+          ? "border-blue-500 bg-blue-50/80 ring-4 ring-blue-500/10 dark:bg-blue-950/25"
+          : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
     }`;
 
     return (
@@ -1250,18 +1325,31 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-950 dark:text-white">{option.title}</h3>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${badgeClassName}`}>
+                <h3 className="text-sm font-bold text-slate-950 dark:text-white">
+                  {option.title}
+                </h3>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${badgeClassName}`}
+                >
                   {badgeLabel}
                 </span>
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{option.description}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                {option.description}
+              </p>
               {option.details && (
                 <dl className="mt-3 grid gap-2 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-900">
                   {option.details.map((detail) => (
-                    <div key={detail.label} className="flex justify-between gap-3">
-                      <dt className="text-slate-500 dark:text-slate-400">{detail.label}</dt>
-                      <dd className="text-right font-bold text-slate-800 dark:text-slate-100">{detail.value}</dd>
+                    <div
+                      key={detail.label}
+                      className="flex justify-between gap-3"
+                    >
+                      <dt className="text-slate-500 dark:text-slate-400">
+                        {detail.label}
+                      </dt>
+                      <dd className="text-right font-bold text-slate-800 dark:text-slate-100">
+                        {detail.value}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -1278,7 +1366,8 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
             </p>
             <div className="mt-3 grid gap-2">
               {ewalletProviderOptions.map((provider) => {
-                const providerSelected = selectedEWalletProvider === provider.id;
+                const providerSelected =
+                  selectedEWalletProvider === provider.id;
 
                 return (
                   <label
@@ -1322,7 +1411,7 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           ? "Pembayaran siap. Anda akan diarahkan lebih cepat."
           : preparedPaymentStatus === "failed"
             ? "Pembayaran akan diproses setelah Anda klik lanjut."
-          : ""
+            : ""
       : "";
 
   const submitLabel = isProcessing
@@ -1332,13 +1421,19 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       : "Lanjutkan Pembayaran";
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-6 lg:grid-cols-[1fr_360px]"
+    >
       <div className="space-y-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <div className="mb-5">
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">Form Data Pemesan</h2>
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              Form Data Pemesan
+            </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Lengkapi data utama agar tim Digital Carroll Base dapat menyiapkan proses briefing.
+              Lengkapi data utama agar tim Digital Carroll Base dapat menyiapkan
+              proses briefing.
             </p>
           </div>
 
@@ -1347,7 +1442,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
               Nama lengkap
               <input
                 value={customer.fullName}
-                onChange={(event) => updateCustomer("fullName", event.target.value)}
+                onChange={(event) =>
+                  updateCustomer("fullName", event.target.value)
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950"
                 placeholder="Nama Anda"
               />
@@ -1368,7 +1465,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
               Nomor WhatsApp
               <input
                 value={customer.whatsapp}
-                onChange={(event) => updateCustomer("whatsapp", event.target.value)}
+                onChange={(event) =>
+                  updateCustomer("whatsapp", event.target.value)
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950"
                 placeholder="08xxxxxxxxxx"
               />
@@ -1378,7 +1477,9 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
               Nama bisnis / brand
               <input
                 value={customer.businessName}
-                onChange={(event) => updateCustomer("businessName", event.target.value)}
+                onChange={(event) =>
+                  updateCustomer("businessName", event.target.value)
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950"
                 placeholder="Nama bisnis Anda"
               />
@@ -1405,9 +1506,13 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <div className="mb-5">
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">Pilih Metode Pembayaran</h2>
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+              Pilih Metode Pembayaran
+            </h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Silakan pilih metode pembayaran yang paling sesuai. Pembayaran otomatis akan diproses melalui Duitku, sedangkan pembayaran manual memerlukan konfirmasi melalui WhatsApp.
+              Silakan pilih metode pembayaran yang paling sesuai. Pembayaran
+              otomatis akan diproses melalui Duitku, sedangkan pembayaran manual
+              memerlukan konfirmasi melalui WhatsApp.
             </p>
           </div>
 
@@ -1416,14 +1521,18 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 Pembayaran Otomatis via Duitku
               </p>
-              <div className="grid gap-3 md:grid-cols-3">{automaticPaymentOptions.map(renderPaymentCard)}</div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {automaticPaymentOptions.map(renderPaymentCard)}
+              </div>
             </div>
 
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                 Pembayaran Manual
               </p>
-              <div className="grid gap-3 md:grid-cols-2">{manualPaymentOptions.map(renderPaymentCard)}</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {manualPaymentOptions.map(renderPaymentCard)}
+              </div>
             </div>
           </div>
 
@@ -1442,7 +1551,10 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
           {manualInvoiceId && (
             <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-200">
               Invoice manual berhasil dibuat.{" "}
-              <Link href={`/invoice/${manualInvoiceId}`} className="font-bold underline underline-offset-4">
+              <Link
+                href={`/invoice/${manualInvoiceId}`}
+                className="font-bold underline underline-offset-4"
+              >
                 Lihat Invoice
               </Link>
             </div>
@@ -1469,27 +1581,40 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
       </div>
 
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:sticky lg:top-28">
-        <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Ringkasan Pesanan</p>
-        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">{checkoutPlan.name}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{checkoutPlan.description}</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+          Ringkasan Pesanan
+        </p>
+        <h2 className="mt-2 text-xl font-extrabold text-slate-950 dark:text-white">
+          {checkoutPlan.name}
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          {checkoutPlan.description}
+        </p>
 
         <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Plan ID</span>
-            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">{checkoutPlan.id}</span>
+            <span className="text-right font-semibold text-slate-800 dark:text-slate-100">
+              {checkoutPlan.id}
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Harga</span>
-            <span className="text-right font-extrabold text-slate-950 dark:text-white">{checkoutPlan.price}</span>
+            <span className="text-right font-extrabold text-slate-950 dark:text-white">
+              {checkoutPlan.price}
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-slate-500 dark:text-slate-400">Total</span>
-            <span className="text-right font-extrabold text-slate-950 dark:text-white">{formatCurrency(checkoutAmount)}</span>
+            <span className="text-right font-extrabold text-slate-950 dark:text-white">
+              {formatCurrency(checkoutAmount)}
+            </span>
           </div>
         </div>
 
         <p className="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-          Harga dapat menyesuaikan scope final, domain, hosting, aset premium, dan integrasi tambahan.
+          Harga dapat menyesuaikan scope final, domain, hosting, aset premium,
+          dan integrasi tambahan.
         </p>
       </aside>
     </form>
