@@ -68,7 +68,7 @@ function getPaymentCode(...codes: (string | undefined)[]) {
 
 export function mapPaymentMethodToDuitkuCode(
   paymentMethod: PaymentMethod,
-  ewalletProvider: EWalletProvider = "ovo"
+  ewalletProvider?: EWalletProvider
 ) {
   switch (paymentMethod) {
     case "virtual_account":
@@ -78,6 +78,10 @@ export function mapPaymentMethodToDuitkuCode(
       return getPaymentCode(process.env.DUITKU_QRIS_PAYMENT_CODE, "SQ");
 
     case "ewallet":
+      if (!ewalletProvider) {
+        return null;
+      }
+
       switch (ewalletProvider) {
         case "ovo":
           return getPaymentCode(
@@ -226,16 +230,24 @@ export function validateDuitkuRequestPayload(
     };
   }
 
-  if (
-    payload.paymentMethod === "ewallet" &&
-    !isEWalletProvider(payload.ewalletProvider ?? "ovo")
-  ) {
-    return {
-      valid: false,
-      code: "VALIDATION_ERROR",
-      message:
-        "Provider e-wallet harus salah satu dari ovo, shopeepay, linkaja, atau dana.",
-    };
+  if (payload.paymentMethod === "ewallet") {
+    if (!payload.ewalletProvider) {
+      return {
+        valid: false,
+        code: "VALIDATION_ERROR",
+        message:
+          "Provider e-wallet wajib dipilih. Pilih salah satu: ovo, shopeepay, linkaja, atau dana.",
+      };
+    }
+
+    if (!isEWalletProvider(payload.ewalletProvider)) {
+      return {
+        valid: false,
+        code: "VALIDATION_ERROR",
+        message:
+          "Provider e-wallet harus salah satu dari ovo, shopeepay, linkaja, atau dana.",
+      };
+    }
   }
 
   return {

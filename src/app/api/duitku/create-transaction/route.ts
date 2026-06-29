@@ -64,7 +64,11 @@ function normalizeEWalletProvider(
     ewalletProvider === null ||
     ewalletProvider === ""
   ) {
-    return { valid: true, provider: "ovo" };
+    return {
+    valid: false,
+    message:
+      "Provider e-wallet wajib dipilih. Pilih salah satu: ovo, shopeepay, linkaja, atau dana.",
+  };
   }
 
   if (isEWalletProvider(ewalletProvider)) {
@@ -74,7 +78,7 @@ function normalizeEWalletProvider(
   return {
     valid: false,
     message:
-      "Provider e-wallet harus salah satu dari ovo, shopeepay, atau linkaja.",
+      "Provider e-wallet harus salah satu dari ovo, shopeepay, linkaja, atau dana.",
   };
 }
 
