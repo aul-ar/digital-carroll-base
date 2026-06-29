@@ -664,6 +664,8 @@ export default function PaymentProcessingPage() {
       writePreparedPayment(pendingPreparedPayment);
 
       try {
+        console.error("[PAYMENT DEBUG] PROCESSING_POST_BODY", pendingPayment);
+
         const response = await fetch("/api/duitku/create-transaction", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -818,6 +820,13 @@ export default function PaymentProcessingPage() {
         setState("missing");
         return;
       }
+
+      console.error("[PAYMENT DEBUG] PROCESSING_PAYLOAD", {
+        paymentMethod: pendingPayment.paymentMethod,
+        ewalletProvider: pendingPayment.ewalletProvider ?? null,
+        invoiceId: pendingPayment.invoiceId,
+        orderId: pendingPayment.orderId,
+      });
 
       setPayload(pendingPayment);
       startPaymentFlow(pendingPayment);

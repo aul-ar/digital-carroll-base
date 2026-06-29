@@ -214,6 +214,14 @@ export async function POST(request: Request) {
 
     logTiming("body_parsed");
 
+    console.error("[PAYMENT DEBUG] API_BODY_RECEIVED", {
+      paymentMethod: body.paymentMethod,
+      ewalletProvider: body.ewalletProvider ?? null,
+      invoiceId: body.invoiceId,
+      orderId: body.orderId,
+      planId: body.planId,
+    });
+
     const selectedPlan = getSelectedPricingPlan(body.planId);
 
     if (!selectedPlan) {
@@ -401,6 +409,17 @@ export async function POST(request: Request) {
     console.info("[DUITKU] payment_code_resolved", {
       paymentMethod: payload.paymentMethod,
       ewalletProvider: payload.ewalletProvider ?? null,
+      duitkuPaymentMethodCode,
+      merchantOrderId,
+      invoiceId: payload.invoiceId,
+      orderId: payload.orderId,
+    });
+
+    console.error("[PAYMENT DEBUG] API_DUITKU_CODE_RESOLVED", {
+      payload: {
+        paymentMethod: payload.paymentMethod,
+        ewalletProvider: payload.ewalletProvider ?? null,
+      },
       duitkuPaymentMethodCode,
       merchantOrderId,
       invoiceId: payload.invoiceId,

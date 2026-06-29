@@ -167,6 +167,10 @@ function isEWalletProvider(value: unknown): value is EWalletProvider {
 }
 
 function writePendingPaymentPayload(payload: PendingAutomaticPaymentPayload) {
+  if (payload.paymentMethod === "ewallet" && !payload.ewalletProvider) {
+    return false;
+  }
+
   try {
     window.sessionStorage.removeItem(preparedPaymentStorageKey);
     window.sessionStorage.removeItem(pendingPaymentStorageKey);
@@ -480,6 +484,17 @@ export function CheckoutClient({ initialPlanId }: CheckoutClientProps) {
         ewalletProvider: selectedProvider ?? null,
         orderId: pendingPayment.orderId,
         invoiceId: pendingPayment.invoiceId,
+      });
+
+      console.error("[PAYMENT DEBUG] CHECKOUT_SUBMIT", {
+        selectedPaymentMethod,
+        selectedEWalletProvider,
+        payload: {
+          paymentMethod: pendingPayment.paymentMethod,
+          ewalletProvider: pendingPayment.ewalletProvider ?? null,
+          invoiceId: pendingPayment.invoiceId,
+          orderId: pendingPayment.orderId,
+        },
       });
 
       if (!writePendingPaymentPayload(pendingPayment)) {
